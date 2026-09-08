@@ -1,0 +1,57 @@
+name: Pharmacy Order CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - "feature/**"
+
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  build-and-test:
+    name: Build and Test Pharmacy Order
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore PharmacyOrder.sln
+
+      - name: Build
+        run: dotnet build PharmacyOrder.sln --no-restore --configuration Release
+
+      - name: Run tests with coverage
+        run: dotnet test PharmacyOrder.sln --no-build --configuration Release --collect:"XPlat Code Coverage" --results-directory ./TestResults --logger "trx"
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Pharmacy Order Test Results
+          path: "TestResults/**/*.trx"
+          reporter: dotnet-trx
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: TestResults/**/coverage.cobertura.xml
+
+      - name: Build Docker image
+        run: docker build -t carenova-pharmacy-order:ci-test .
