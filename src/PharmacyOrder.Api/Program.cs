@@ -60,6 +60,7 @@ builder.Services
 builder.Services.AddPharmacyStaffAuthorization();
 builder.Services.AddScoped<IKafkaEventProducer, KafkaEventProducer>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IMedicineService, MedicineService>();
 builder.Services.AddHostedService<OutboxPublisherService>();
 builder.Services.AddHostedService<KafkaConsumerService>();
 
