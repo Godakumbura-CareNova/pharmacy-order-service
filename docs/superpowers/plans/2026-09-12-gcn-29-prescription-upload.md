@@ -14,7 +14,7 @@
 
 - Patient-only feature; PharmacyStaff verification is deferred to GCN-32.
 - Accept exactly one PDF, JPG, JPEG, or PNG file, maximum 10 MB.
-- Store generated server filenames and safe relative paths; never trust client paths.
+- Store generated server filenames and safe relative paths in private storage outside `wwwroot`; never trust client paths.
 - Files must be returned only through an ownership-checked endpoint; do not expose anonymous static URLs.
 - GCN-29 creates no cart item and emits no Kafka event.
 - Use plain Git commit messages without `feat:`, `fix:`, or `chore:` prefixes.
@@ -60,9 +60,9 @@
 - Modify: `src/PharmacyOrder.Api/appsettings.json`
 - Create: `tests/PharmacyOrder.Api.Tests/Unit/PrescriptionStorageTests.cs`
 
-**Consumes:** `IFormFile`, existing `FileStorageService`, `wwwroot/uploads` convention.
+**Consumes:** `IFormFile`, existing `FileStorageService`, private local `uploads` convention.
 
-**Produces:** `Prescription` fields `MedicineId`, `Medicine`, `Quantity`, `OriginalFileName`, and `Status`; `SavePrescriptionAsync(IFormFile, CancellationToken)` returning a `/uploads/prescriptions/<generated-name>` path; `GetPrescriptionFilePath(string)` returning the safe physical file path.
+**Produces:** `Prescription` fields `MedicineId`, `Medicine`, `Quantity`, `OriginalFileName`, and `Status`; `SavePrescriptionAsync(IFormFile, CancellationToken)` returning a `prescriptions/<generated-name>` path; `GetPrescriptionFilePath(string)` returning the safe physical file path.
 
 - [ ] **Step 1: Write failing storage tests**
 
@@ -100,7 +100,7 @@ public string OriginalFileName { get; set; } = string.Empty;
 public string Status { get; set; } = "PendingVerification";
 ```
 
-Use `Path.GetExtension`, allow only `.pdf`, `.jpg`, `.jpeg`, `.png`, create the configured directory, write a GUID filename, and return only its `/uploads/prescriptions/` relative path. Configure `PrescriptionStorage` with `UploadPath: "wwwroot/uploads/prescriptions"`, `MaxFileSizeMb: 10`, and the four allowed extensions. Do not change medicine-image limits.
+Use `Path.GetExtension`, allow only `.pdf`, `.jpg`, `.jpeg`, `.png`, create the configured directory, write a GUID filename, and return only its `prescriptions/` relative path. Configure `PrescriptionStorage` with `UploadPath: "uploads/prescriptions"`, `MaxFileSizeMb: 10`, and the four allowed extensions. Do not change medicine-image limits.
 
 - [ ] **Step 4: Run the focused storage tests**
 

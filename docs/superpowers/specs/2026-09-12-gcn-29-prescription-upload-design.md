@@ -25,7 +25,7 @@ The existing `Prescription` entity is extended with:
 
 ## File storage and access
 
-The API accepts only PDF, JPG, JPEG, and PNG files, limited to 10 MB. It generates a unique storage filename and saves the file under `wwwroot/uploads/prescriptions`. The database stores a safe relative file path, never a client-supplied absolute path.
+The API accepts only PDF, JPG, JPEG, and PNG files, limited to 10 MB. It generates a unique storage filename and saves the file under a private `uploads/prescriptions` folder outside `wwwroot`. The database stores a safe relative file path, never a client-supplied absolute path.
 
 Prescription files are not exposed through anonymous static-file URLs. A Patient-authorized download endpoint checks that the record belongs to the authenticated patient before returning the file. A PharmacyStaff endpoint is deferred to GCN-32.
 
