@@ -33,4 +33,30 @@ public class InventoryServiceTests
         Assert.Contains(db.EventOutboxEntries, entry => entry.EventType == EventTypes.InventoryUpdated);
         Assert.Contains(db.EventOutboxEntries, entry => entry.EventType == EventTypes.LowStockDetected);
     }
+
+    [Fact]
+    public async Task UpdateBatchAsync_ToZeroQueuesOutOfStockEvent()
+    {
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .ConfigureWarnings(warnings => warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+            .Options);
+        var medicine = new Medicine { Name = "Ibuprofen", Description = "Pain relief", IsActive = true };
+        db.Medicines.Add(medicine);
+        await db.SaveChangesAsync();
+        var service = new InventoryService(db, new Config.KafkaSettings { LowStockThreshold = 10 });
+        var request = new StockBatchRequestDto
+        {
+            MedicineId = medicine.Id, BatchNumber = "IBU-001", Quantity = 8,
+            PurchasePrice = 120m, SellingPrice = 200m,
+            ManufacturingDate = new DateTime(2026, 1, 1), ExpiryDate = new DateTime(2027, 1, 1)
+        };
+        var batch = await service.CreateBatchAsync(request);
+
+        request.Quantity = 0;
+        await service.UpdateBatchAsync(batch.Id, request);
+
+        Assert.Equal(0, medicine.StockQuantity);
+        Assert.Contains(db.EventOutboxEntries, entry => entry.EventType == EventTypes.MedicineOutOfStock);
+    }
 }

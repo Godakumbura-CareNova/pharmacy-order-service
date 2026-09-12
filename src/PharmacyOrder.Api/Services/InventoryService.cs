@@ -38,7 +38,12 @@ public class InventoryService : IInventoryService
     {
         await using var transaction = await _db.Database.BeginTransactionAsync();
         var medicine = await _db.Medicines.FindAsync(medicineId) ?? throw new KeyNotFoundException("Medicine was not found.");
-        var total = _db.Stocks.Local.Where(s => s.MedicineId == medicineId).Sum(s => s.Quantity) + await _db.Stocks.Where(s => s.MedicineId == medicineId && !_db.Stocks.Local.Select(x => x.Id).Contains(s.Id)).SumAsync(s => (int?)s.Quantity) ?? 0;
+        var trackedIds = _db.Stocks.Local.Select(s => s.Id).ToHashSet();
+        var trackedTotal = _db.Stocks.Local.Where(s => s.MedicineId == medicineId).Sum(s => s.Quantity);
+        var savedTotal = await _db.Stocks
+            .Where(s => s.MedicineId == medicineId && !trackedIds.Contains(s.Id))
+            .SumAsync(s => (int?)s.Quantity) ?? 0;
+        var total = trackedTotal + savedTotal;
         medicine.StockQuantity = total;
         AddEvent(EventTypes.InventoryUpdated, medicineId, stock, total);
         if (total <= _settings.LowStockThreshold) AddEvent(EventTypes.LowStockDetected, medicineId, stock, total);
