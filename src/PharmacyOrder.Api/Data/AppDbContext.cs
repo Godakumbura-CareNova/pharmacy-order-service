@@ -49,5 +49,14 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Stock>()
             .HasIndex(stock => new { stock.MedicineId, stock.BatchNumber })
             .IsUnique();
+
+        modelBuilder.Entity<Prescription>()
+            .HasOne(prescription => prescription.Medicine)
+            .WithMany()
+            .HasForeignKey(prescription => prescription.MedicineId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Prescription>()
+            .HasIndex(prescription => prescription.UploadedBy);
     }
 }

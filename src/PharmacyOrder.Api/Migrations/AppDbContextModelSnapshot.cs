@@ -240,6 +240,20 @@ namespace PharmacyOrder.Api.Migrations
                     b.Property<bool>("IsVerified")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<int>("MedicineId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.Property<DateTime>("UploadedAt")
                         .HasColumnType("datetime(6)");
 
@@ -247,6 +261,10 @@ namespace PharmacyOrder.Api.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("MedicineId");
+
+                    b.HasIndex("UploadedBy");
 
                     b.ToTable("Prescriptions");
                 });
@@ -380,6 +398,17 @@ namespace PharmacyOrder.Api.Migrations
                     b.Navigation("Medicine");
 
                     b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("PharmacyOrder.Api.Models.Prescription", b =>
+                {
+                    b.HasOne("PharmacyOrder.Api.Models.Medicine", "Medicine")
+                        .WithMany()
+                        .HasForeignKey("MedicineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Medicine");
                 });
 
             modelBuilder.Entity("PharmacyOrder.Api.Models.Stock", b =>
