@@ -47,6 +47,13 @@ public class MedicineService : IMedicineService
         medicine.IsActive = false; await _dbContext.SaveChangesAsync(); await AddEventAsync(EventTypes.MedicineDeactivated, medicine);
     }
 
+    public async Task<MedicineResponseDto> UpdateImageAsync(int id, string imagePath)
+    {
+        var medicine = await _dbContext.Medicines.Include(item => item.Category).SingleOrDefaultAsync(item => item.Id == id) ?? throw new KeyNotFoundException("Medicine was not found.");
+        medicine.ImagePath = imagePath; await _dbContext.SaveChangesAsync(); await AddEventAsync(EventTypes.MedicineUpdated, medicine);
+        return ToResponse(medicine);
+    }
+
     private async Task ValidateAsync(MedicineRequestDto request, int? excludeId)
     {
         if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 120) throw new ArgumentException("Medicine name is required and must be 120 characters or fewer.");

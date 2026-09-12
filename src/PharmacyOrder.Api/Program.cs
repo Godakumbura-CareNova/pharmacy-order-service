@@ -18,6 +18,8 @@ builder.Services.AddOptions<JwtSettings>()
     .Bind(builder.Configuration.GetSection("JwtSettings"));
 builder.Services.AddOptions<KafkaSettings>()
     .Bind(builder.Configuration.GetSection("Kafka"));
+builder.Services.AddOptions<FileStorageSettings>()
+    .Bind(builder.Configuration.GetSection("FileStorage"));
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
     ?? new[] { "http://localhost:3000" };
@@ -61,6 +63,7 @@ builder.Services.AddPharmacyStaffAuthorization();
 builder.Services.AddScoped<IKafkaEventProducer, KafkaEventProducer>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IMedicineService, MedicineService>();
+builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 builder.Services.AddHostedService<OutboxPublisherService>();
 builder.Services.AddHostedService<KafkaConsumerService>();
 
@@ -84,6 +87,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseCors("FrontendPolicy");
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
