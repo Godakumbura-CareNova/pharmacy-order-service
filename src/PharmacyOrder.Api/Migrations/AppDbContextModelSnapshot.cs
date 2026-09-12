@@ -305,7 +305,7 @@ namespace PharmacyOrder.Api.Migrations
 
                     b.Property<string>("BatchNumber")
                         .IsRequired()
-                        .HasColumnType("longtext");
+                        .HasColumnType("varchar(255)");
 
                     b.Property<DateTime>("ExpiryDate")
                         .HasColumnType("datetime(6)");
@@ -327,7 +327,8 @@ namespace PharmacyOrder.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("MedicineId");
+                    b.HasIndex("MedicineId", "BatchNumber")
+                        .IsUnique();
 
                     b.ToTable("Stocks");
                 });

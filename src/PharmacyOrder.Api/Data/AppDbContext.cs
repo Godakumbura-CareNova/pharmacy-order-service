@@ -45,5 +45,9 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<StaffNotification>()
             .HasIndex(notification => notification.EventId)
             .IsUnique();
+
+        modelBuilder.Entity<Stock>()
+            .HasIndex(stock => new { stock.MedicineId, stock.BatchNumber })
+            .IsUnique();
     }
 }
