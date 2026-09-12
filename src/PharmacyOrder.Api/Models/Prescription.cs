@@ -6,7 +6,17 @@ public class Prescription
 
     public string FilePath { get; set; } = string.Empty;
 
-    public int UploadedBy { get; set; }
+    public string OriginalFileName { get; set; } = string.Empty;
+
+    public Guid UploadedBy { get; set; }
+
+    public int MedicineId { get; set; }
+
+    public Medicine? Medicine { get; set; }
+
+    public int Quantity { get; set; }
+
+    public string Status { get; set; } = "PendingVerification";
 
     public bool IsVerified { get; set; }
 

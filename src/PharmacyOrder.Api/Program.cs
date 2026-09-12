@@ -20,6 +20,8 @@ builder.Services.AddOptions<KafkaSettings>()
     .Bind(builder.Configuration.GetSection("Kafka"));
 builder.Services.AddOptions<FileStorageSettings>()
     .Bind(builder.Configuration.GetSection("FileStorage"));
+builder.Services.AddOptions<PrescriptionStorageSettings>()
+    .Bind(builder.Configuration.GetSection("PrescriptionStorage"));
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
     ?? new[] { "http://localhost:3000" };
@@ -68,6 +70,7 @@ builder.Services.AddScoped<IInventoryService>(serviceProvider => new InventorySe
     serviceProvider.GetRequiredService<AppDbContext>(),
     serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<KafkaSettings>>().Value));
 builder.Services.AddScoped<IFileStorageService, FileStorageService>();
+builder.Services.AddScoped<IPrescriptionService, PrescriptionService>();
 builder.Services.AddHostedService<OutboxPublisherService>();
 builder.Services.AddHostedService<KafkaConsumerService>();
 

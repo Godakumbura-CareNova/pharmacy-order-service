@@ -17,7 +17,13 @@ public class FileStorageServiceTests
             MaxFileSizeMb = 5,
             AllowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" }
         });
-        var service = new FileStorageService(settings);
+        var prescriptionSettings = Options.Create(new PrescriptionStorageSettings
+        {
+            UploadPath = Path.Combine(directory, "prescriptions"),
+            MaxFileSizeMb = 10,
+            AllowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png" }
+        });
+        var service = new FileStorageService(settings, prescriptionSettings);
         await using var source = new MemoryStream(new byte[] { 1, 2, 3 });
         var file = new FormFile(source, 0, source.Length, "image", "medicine.png");
 
