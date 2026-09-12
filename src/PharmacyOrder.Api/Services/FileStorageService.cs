@@ -8,7 +8,15 @@ namespace PharmacyOrder.Api.Services;
 public class FileStorageService : IFileStorageService
 {
     private readonly FileStorageSettings _settings;
-    public FileStorageService(IOptions<FileStorageSettings> settings) => _settings = settings.Value;
+    private readonly PrescriptionStorageSettings _prescriptionSettings;
+
+    public FileStorageService(
+        IOptions<FileStorageSettings> settings,
+        IOptions<PrescriptionStorageSettings> prescriptionSettings)
+    {
+        _settings = settings.Value;
+        _prescriptionSettings = prescriptionSettings.Value;
+    }
 
     public async Task<string> SaveMedicineImageAsync(IFormFile file, CancellationToken cancellationToken)
     {
@@ -21,5 +29,30 @@ public class FileStorageService : IFileStorageService
         await using var output = File.Create(path);
         await file.CopyToAsync(output, cancellationToken);
         return $"/uploads/medicines/{fileName}";
+    }
+
+    public async Task<string> SavePrescriptionAsync(IFormFile file, CancellationToken cancellationToken)
+    {
+        if (file.Length == 0 || file.Length > _prescriptionSettings.MaxFileSizeMb * 1024 * 1024)
+            throw new ArgumentException("Prescription file must be between 1 byte and 10 MB.");
+
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!_prescriptionSettings.AllowedExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
+            throw new ArgumentException("Only PDF, JPG, JPEG, and PNG prescription files are supported.");
+
+        var directory = Path.GetFullPath(_prescriptionSettings.UploadPath);
+        Directory.CreateDirectory(directory);
+        var fileName = $"{Guid.NewGuid():N}{extension}";
+        var path = Path.Combine(directory, fileName);
+
+        await using var output = File.Create(path);
+        await file.CopyToAsync(output, cancellationToken);
+        return $"prescriptions/{fileName}";
+    }
+
+    public string GetPrescriptionFilePath(string storedPath)
+    {
+        var fileName = Path.GetFileName(storedPath);
+        return Path.Combine(Path.GetFullPath(_prescriptionSettings.UploadPath), fileName);
     }
 }
