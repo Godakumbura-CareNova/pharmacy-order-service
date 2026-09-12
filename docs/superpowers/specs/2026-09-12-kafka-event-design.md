@@ -133,6 +133,12 @@ The Pharmacy API receives Kafka settings through configuration or environment va
 
 Passwords and production connection values are supplied through local secrets or deployment environment variables, not committed configuration.
 
+## Pharmacy Staff Authorization
+
+GCN-27 staff endpoints require a valid bearer token issued by the existing CareNova User Authentication Service. The Pharmacy Order Service validates the token with issuer `CareNova.UserAuth`, audience `CareNova.Client`, and the shared symmetric signing secret supplied through local user secrets or deployment environment variables.
+
+The user-auth service emits the staff role as `PharmacyStaff`. A Pharmacy Staff authorization policy protects medicine and category create, update, deactivate, and category deletion endpoints. The shared signing secret is never committed to this repository.
+
 ## Developer Validation
 
 During development, verify that Docker Kafka and Kafka UI are running, a successful business operation creates an outbox record, the publisher sends it to the expected topic, and the consumer creates exactly one staff notification for its `eventId`. Existing backend unit and integration checks should remain runnable.
