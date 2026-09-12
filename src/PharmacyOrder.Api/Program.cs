@@ -63,6 +63,9 @@ builder.Services.AddPharmacyStaffAuthorization();
 builder.Services.AddScoped<IKafkaEventProducer, KafkaEventProducer>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IMedicineService, MedicineService>();
+builder.Services.AddScoped<IInventoryService>(serviceProvider => new InventoryService(
+    serviceProvider.GetRequiredService<AppDbContext>(),
+    serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<KafkaSettings>>().Value));
 builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 builder.Services.AddHostedService<OutboxPublisherService>();
 builder.Services.AddHostedService<KafkaConsumerService>();

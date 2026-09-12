@@ -36,23 +36,29 @@ public class KafkaConsumerService : BackgroundService
         };
 
         using var consumer = new ConsumerBuilder<string, string>(consumerConfig).Build();
-        consumer.Subscribe(EventTypes.MedicineTopic);
+        consumer.Subscribe(new[] { EventTypes.MedicineTopic, EventTypes.InventoryTopic });
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
                 var result = consumer.Consume(stoppingToken);
-                var medicineEvent = JsonSerializer.Deserialize<MedicineEvent>(result.Message.Value);
+                var notification = result.Topic == EventTypes.InventoryTopic
+                    ? JsonSerializer.Deserialize<InventoryEvent>(result.Message.Value) is { } inventoryEvent
+                        ? (inventoryEvent.EventId, inventoryEvent.EventType, inventoryEvent.EntityType, inventoryEvent.MedicineId, inventoryEvent.OccurredAtUtc)
+                        : ((Guid, string, string, int, DateTime)?)null
+                    : JsonSerializer.Deserialize<MedicineEvent>(result.Message.Value) is { } medicineEvent
+                        ? (medicineEvent.EventId, medicineEvent.EventType, medicineEvent.AggregateType, medicineEvent.AggregateId, medicineEvent.OccurredAtUtc)
+                        : ((Guid, string, string, int, DateTime)?)null;
 
-                if (medicineEvent is null)
+                if (notification is null)
                 {
                     _logger.LogWarning("Ignoring unreadable Kafka event at {TopicPartitionOffset}.", result.TopicPartitionOffset);
                     consumer.Commit(result);
                     continue;
                 }
 
-                await CreateNotificationAsync(medicineEvent, stoppingToken);
+                await CreateNotificationAsync(notification.Value.Item1, notification.Value.Item2, notification.Value.Item3, notification.Value.Item4, notification.Value.Item5, stoppingToken);
                 consumer.Commit(result);
             }
             catch (ConsumeException exception)
@@ -72,13 +78,13 @@ public class KafkaConsumerService : BackgroundService
         }
     }
 
-    private async Task CreateNotificationAsync(MedicineEvent medicineEvent, CancellationToken cancellationToken)
+    private async Task CreateNotificationAsync(Guid eventId, string eventType, string entityType, int entityId, DateTime occurredAtUtc, CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var exists = await dbContext.StaffNotifications
-            .AnyAsync(notification => notification.EventId == medicineEvent.EventId, cancellationToken);
+            .AnyAsync(notification => notification.EventId == eventId, cancellationToken);
 
         if (exists)
         {
@@ -87,13 +93,13 @@ public class KafkaConsumerService : BackgroundService
 
         dbContext.StaffNotifications.Add(new StaffNotification
         {
-            EventId = medicineEvent.EventId,
-            NotificationType = medicineEvent.EventType,
-            Title = medicineEvent.EventType,
-            Message = $"{medicineEvent.AggregateType} #{medicineEvent.AggregateId} changed.",
-            RelatedEntityType = medicineEvent.AggregateType,
-            RelatedEntityId = medicineEvent.AggregateId,
-            CreatedAtUtc = medicineEvent.OccurredAtUtc
+            EventId = eventId,
+            NotificationType = eventType,
+            Title = eventType,
+            Message = $"{entityType} #{entityId} changed.",
+            RelatedEntityType = entityType,
+            RelatedEntityId = entityId,
+            CreatedAtUtc = occurredAtUtc
         });
 
         await dbContext.SaveChangesAsync(cancellationToken);
