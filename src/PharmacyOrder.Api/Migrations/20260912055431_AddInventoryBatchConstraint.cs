@@ -10,10 +10,6 @@ namespace PharmacyOrder.Api.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropIndex(
-                name: "IX_Stocks_MedicineId",
-                table: "Stocks");
-
             migrationBuilder.AlterColumn<string>(
                 name: "BatchNumber",
                 table: "Stocks",
@@ -48,10 +44,7 @@ namespace PharmacyOrder.Api.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4")
                 .OldAnnotation("MySql:CharSet", "utf8mb4");
 
-            migrationBuilder.CreateIndex(
-                name: "IX_Stocks_MedicineId",
-                table: "Stocks",
-                column: "MedicineId");
+            migrationBuilder.Sql("CREATE INDEX `IX_Stocks_MedicineId` ON `Stocks` (`MedicineId`);");
         }
     }
 }
