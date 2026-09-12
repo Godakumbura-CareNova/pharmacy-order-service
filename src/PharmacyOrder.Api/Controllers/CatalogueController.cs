@@ -30,4 +30,11 @@ public class CatalogueController : ControllerBase
     {
         return Ok(await _catalogue.GetCategoriesAsync());
     }
+
+    [HttpGet("medicines/{id:int}")]
+    public async Task<ActionResult<CatalogueMedicineResponseDto>> GetMedicine(int id)
+    {
+        try { return Ok(await _catalogue.GetMedicineAsync(id)); }
+        catch (KeyNotFoundException exception) { return NotFound(new { message = exception.Message }); }
+    }
 }
