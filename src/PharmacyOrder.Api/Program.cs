@@ -5,6 +5,8 @@ using Microsoft.IdentityModel.Tokens;
 using PharmacyOrder.Api.Config;
 using PharmacyOrder.Api.Data;
 using PharmacyOrder.Api.Security;
+using PharmacyOrder.Api.Services;
+using PharmacyOrder.Api.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,6 +58,9 @@ builder.Services
     });
 
 builder.Services.AddPharmacyStaffAuthorization();
+builder.Services.AddScoped<IKafkaEventProducer, KafkaEventProducer>();
+builder.Services.AddHostedService<OutboxPublisherService>();
+builder.Services.AddHostedService<KafkaConsumerService>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(
