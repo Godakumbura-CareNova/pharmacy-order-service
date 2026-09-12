@@ -58,5 +58,30 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Prescription>()
             .HasIndex(prescription => prescription.UploadedBy);
+
+        modelBuilder.Entity<Cart>()
+            .HasIndex(cart => cart.CustomerId)
+            .IsUnique();
+
+        modelBuilder.Entity<CartItem>()
+            .HasOne(cartItem => cartItem.Cart)
+            .WithMany(cart => cart.Items)
+            .HasForeignKey(cartItem => cartItem.CartId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CartItem>()
+            .HasOne(cartItem => cartItem.Medicine)
+            .WithMany()
+            .HasForeignKey(cartItem => cartItem.MedicineId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CartItem>()
+            .HasOne(cartItem => cartItem.Prescription)
+            .WithMany()
+            .HasForeignKey(cartItem => cartItem.PrescriptionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CartItem>()
+            .HasIndex(cartItem => cartItem.PrescriptionId);
     }
 }

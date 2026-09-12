@@ -8,9 +8,13 @@ public class CartItem
 
     public int MedicineId { get; set; }
 
+    public int? PrescriptionId { get; set; }
+
     public int Quantity { get; set; }
 
     public Cart? Cart { get; set; }
 
     public Medicine? Medicine { get; set; }
+
+    public Prescription? Prescription { get; set; }
 }

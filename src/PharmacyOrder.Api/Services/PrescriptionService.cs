@@ -10,11 +10,13 @@ public class PrescriptionService : IPrescriptionService
 {
     private readonly AppDbContext _db;
     private readonly IFileStorageService _files;
+    private readonly ICartService _cart;
 
-    public PrescriptionService(AppDbContext db, IFileStorageService files)
+    public PrescriptionService(AppDbContext db, IFileStorageService files, ICartService cart)
     {
         _db = db;
         _files = files;
+        _cart = cart;
     }
 
     public async Task<PrescriptionResponseDto> UploadAsync(Guid patientId, PrescriptionUploadRequestDto request, CancellationToken cancellationToken)
@@ -42,6 +44,7 @@ public class PrescriptionService : IPrescriptionService
 
         _db.Prescriptions.Add(prescription);
         await _db.SaveChangesAsync(cancellationToken);
+        await _cart.AddPrescriptionItemAsync(patientId, prescription, cancellationToken);
         return ToResponse(prescription, medicine.Name);
     }
 
