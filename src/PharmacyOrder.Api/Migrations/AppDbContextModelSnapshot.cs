@@ -81,6 +81,53 @@ namespace PharmacyOrder.Api.Migrations
                     b.ToTable("Categories");
                 });
 
+            modelBuilder.Entity("PharmacyOrder.Api.Models.EventOutbox", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("EventKey")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("PublishAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("PublishedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Topic")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId")
+                        .IsUnique();
+
+                    b.ToTable("EventOutboxEntries");
+                });
+
             modelBuilder.Entity("PharmacyOrder.Api.Models.Medicine", b =>
                 {
                     b.Property<int>("Id")
@@ -98,6 +145,11 @@ namespace PharmacyOrder.Api.Migrations
 
                     b.Property<string>("ImagePath")
                         .HasColumnType("longtext");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -197,6 +249,50 @@ namespace PharmacyOrder.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Prescriptions");
+                });
+
+            modelBuilder.Entity("PharmacyOrder.Api.Models.StaffNotification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("NotificationType")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("RelatedEntityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RelatedEntityType")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId")
+                        .IsUnique();
+
+                    b.ToTable("StaffNotifications");
                 });
 
             modelBuilder.Entity("PharmacyOrder.Api.Models.Stock", b =>

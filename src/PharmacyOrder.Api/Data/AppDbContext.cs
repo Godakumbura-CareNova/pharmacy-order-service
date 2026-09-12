@@ -25,4 +25,25 @@ public class AppDbContext : DbContext
     public DbSet<OrderItem> OrderItems { get; set; }
 
     public DbSet<Prescription> Prescriptions { get; set; }
+
+    public DbSet<EventOutbox> EventOutboxEntries { get; set; }
+
+    public DbSet<StaffNotification> StaffNotifications { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<Medicine>()
+            .Property(medicine => medicine.IsActive)
+            .HasDefaultValue(true);
+
+        modelBuilder.Entity<EventOutbox>()
+            .HasIndex(entry => entry.EventId)
+            .IsUnique();
+
+        modelBuilder.Entity<StaffNotification>()
+            .HasIndex(notification => notification.EventId)
+            .IsUnique();
+    }
 }

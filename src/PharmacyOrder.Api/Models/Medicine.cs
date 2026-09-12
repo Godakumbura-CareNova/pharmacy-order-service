@@ -16,6 +16,8 @@ public class Medicine
 
     public bool PrescriptionRequired { get; set; }
 
+    public bool IsActive { get; set; } = true;
+
     public int StockQuantity { get; set; }
 
     public Category? Category { get; set; }
