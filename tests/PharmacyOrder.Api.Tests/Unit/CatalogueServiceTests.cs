@@ -77,6 +77,21 @@ public class CatalogueServiceTests
         Assert.Collection(categories, category => Assert.Equal("Pain Relief", category.Name));
     }
 
+    [Fact]
+    public async Task GetMedicineAsync_ReturnsOnlyActiveMedicineWithStock()
+    {
+        await using var db = CreateDbContext();
+        var category = new Category { Name = "Pain Relief" };
+        var medicine = new Medicine { Name = "Ibuprofen", Description = "Pain relief", Category = category, IsActive = true, StockQuantity = 5, Price = 200m };
+        db.Medicines.Add(medicine);
+        await db.SaveChangesAsync();
+
+        var result = await new CatalogueService(db).GetMedicineAsync(medicine.Id);
+
+        Assert.Equal("Ibuprofen", result.Name);
+        Assert.Equal(5, result.StockQuantity);
+    }
+
     private static AppDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
