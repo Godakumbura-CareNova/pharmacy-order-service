@@ -48,5 +48,5 @@ public class PrescriptionController : ControllerBase
         catch (KeyNotFoundException) { return NotFound(); }
     }
 
-    private int GetPatientId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    private Guid GetPatientId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 }

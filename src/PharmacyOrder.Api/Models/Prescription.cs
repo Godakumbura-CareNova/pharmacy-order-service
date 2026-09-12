@@ -8,7 +8,7 @@ public class Prescription
 
     public string OriginalFileName { get; set; } = string.Empty;
 
-    public int UploadedBy { get; set; }
+    public Guid UploadedBy { get; set; }
 
     public int MedicineId { get; set; }
 

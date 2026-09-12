@@ -19,7 +19,8 @@ public class PrescriptionServiceTests
         await db.SaveChangesAsync();
         var service = new PrescriptionService(db, new FakeFileStorage());
 
-        var result = await service.UploadAsync(17, new PrescriptionUploadRequestDto
+        var patientId = Guid.NewGuid();
+        var result = await service.UploadAsync(patientId, new PrescriptionUploadRequestDto
         {
             MedicineId = medicine.Id,
             Quantity = 2,
@@ -29,19 +30,19 @@ public class PrescriptionServiceTests
         Assert.Equal("PendingVerification", result.Status);
         Assert.Equal(2, result.Quantity);
         Assert.Equal("Amoxicillin", result.MedicineName);
-        Assert.Equal(17, (await db.Prescriptions.SingleAsync()).UploadedBy);
+        Assert.Equal(patientId, (await db.Prescriptions.SingleAsync()).UploadedBy);
     }
 
     [Fact]
     public async Task GetOwnedFileAsync_RejectsAnotherPatientsPrescription()
     {
         await using var db = CreateDbContext();
-        var prescription = new Prescription { UploadedBy = 17, FilePath = "prescriptions/private.pdf" };
+        var prescription = new Prescription { UploadedBy = Guid.NewGuid(), FilePath = "prescriptions/private.pdf" };
         db.Prescriptions.Add(prescription);
         await db.SaveChangesAsync();
         var service = new PrescriptionService(db, new FakeFileStorage());
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.GetOwnedFileAsync(99, prescription.Id));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.GetOwnedFileAsync(Guid.NewGuid(), prescription.Id));
     }
 
     private static AppDbContext CreateDbContext()

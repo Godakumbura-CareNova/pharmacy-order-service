@@ -17,7 +17,7 @@ public class PrescriptionService : IPrescriptionService
         _files = files;
     }
 
-    public async Task<PrescriptionResponseDto> UploadAsync(int patientId, PrescriptionUploadRequestDto request, CancellationToken cancellationToken)
+    public async Task<PrescriptionResponseDto> UploadAsync(Guid patientId, PrescriptionUploadRequestDto request, CancellationToken cancellationToken)
     {
         if (request.File is null) throw new ArgumentException("A prescription file is required.");
 
@@ -45,7 +45,7 @@ public class PrescriptionService : IPrescriptionService
         return ToResponse(prescription, medicine.Name);
     }
 
-    public async Task<IReadOnlyList<PrescriptionResponseDto>> GetForPatientAsync(int patientId)
+    public async Task<IReadOnlyList<PrescriptionResponseDto>> GetForPatientAsync(Guid patientId)
     {
         return await _db.Prescriptions
             .Where(prescription => prescription.UploadedBy == patientId)
@@ -64,7 +64,7 @@ public class PrescriptionService : IPrescriptionService
             .ToListAsync();
     }
 
-    public async Task<PrescriptionFileResult> GetOwnedFileAsync(int patientId, int prescriptionId)
+    public async Task<PrescriptionFileResult> GetOwnedFileAsync(Guid patientId, int prescriptionId)
     {
         var prescription = await _db.Prescriptions.SingleOrDefaultAsync(item => item.Id == prescriptionId && item.UploadedBy == patientId)
             ?? throw new KeyNotFoundException("Prescription was not found.");

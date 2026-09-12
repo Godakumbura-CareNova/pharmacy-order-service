@@ -4,9 +4,9 @@ namespace PharmacyOrder.Api.Services.Interfaces;
 
 public interface IPrescriptionService
 {
-    Task<PrescriptionResponseDto> UploadAsync(int patientId, PrescriptionUploadRequestDto request, CancellationToken cancellationToken);
+    Task<PrescriptionResponseDto> UploadAsync(Guid patientId, PrescriptionUploadRequestDto request, CancellationToken cancellationToken);
 
-    Task<IReadOnlyList<PrescriptionResponseDto>> GetForPatientAsync(int patientId);
+    Task<IReadOnlyList<PrescriptionResponseDto>> GetForPatientAsync(Guid patientId);
 
-    Task<PrescriptionFileResult> GetOwnedFileAsync(int patientId, int prescriptionId);
+    Task<PrescriptionFileResult> GetOwnedFileAsync(Guid patientId, int prescriptionId);
 }
