@@ -25,7 +25,18 @@ public class KafkaConsumerService : BackgroundService
         _logger = logger;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        // consumer.Consume() blocks synchronously. Run the loop on a dedicated thread so
+        // host startup (and Kestrel) is not blocked waiting for the first Kafka message.
+        return Task.Factory.StartNew(
+            () => ConsumeLoopAsync(stoppingToken),
+            stoppingToken,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default).Unwrap();
+    }
+
+    private async Task ConsumeLoopAsync(CancellationToken stoppingToken)
     {
         var consumerConfig = new ConsumerConfig
         {
