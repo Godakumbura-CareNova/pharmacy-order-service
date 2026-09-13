@@ -40,6 +40,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Order>().Property(order => order.RequestFingerprint).HasMaxLength(64);
         modelBuilder.Entity<Order>().Property(order => order.Status).IsConcurrencyToken();
         modelBuilder.Entity<Order>().Property(order => order.RejectionReason).HasMaxLength(1000);
+        modelBuilder.Entity<Prescription>().Property(prescription => prescription.DecisionReason).HasMaxLength(1000);
         modelBuilder.Entity<OrderItem>().HasOne(item => item.Prescription).WithMany()
             .HasForeignKey(item => item.PrescriptionId).OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<OrderStockAllocation>().HasOne(item => item.Stock).WithMany()
