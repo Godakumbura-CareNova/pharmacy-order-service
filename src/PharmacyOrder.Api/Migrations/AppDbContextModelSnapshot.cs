@@ -56,9 +56,11 @@ namespace PharmacyOrder.Api.Migrations
                         .HasColumnType("int");
 
                     b.Property<int?>("PrescriptionId")
+                        .IsConcurrencyToken()
                         .HasColumnType("int");
 
                     b.Property<int>("Quantity")
+                        .IsConcurrencyToken()
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -155,6 +157,7 @@ namespace PharmacyOrder.Api.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<bool>("IsActive")
+                        .IsConcurrencyToken()
                         .ValueGeneratedOnAdd()
                         .HasColumnType("tinyint(1)")
                         .HasDefaultValue(true);
@@ -164,12 +167,15 @@ namespace PharmacyOrder.Api.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<bool>("PrescriptionRequired")
+                        .IsConcurrencyToken()
                         .HasColumnType("tinyint(1)");
 
                     b.Property<decimal>("Price")
+                        .IsConcurrencyToken()
                         .HasColumnType("decimal(65,30)");
 
                     b.Property<int>("StockQuantity")
+                        .IsConcurrencyToken()
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -187,19 +193,35 @@ namespace PharmacyOrder.Api.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("char(36)");
 
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<string>("RequestFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("char(36)");
+
                     b.Property<int>("Status")
+                        .IsConcurrencyToken()
                         .HasColumnType("int");
 
                     b.Property<decimal>("TotalAmount")
                         .HasColumnType("decimal(65,30)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CustomerId", "RequestId")
+                        .IsUnique();
 
                     b.ToTable("Orders");
                 });
@@ -215,7 +237,14 @@ namespace PharmacyOrder.Api.Migrations
                     b.Property<int>("MedicineId")
                         .HasColumnType("int");
 
+                    b.Property<string>("MedicineName")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PrescriptionId")
                         .HasColumnType("int");
 
                     b.Property<int>("Quantity")
@@ -230,7 +259,35 @@ namespace PharmacyOrder.Api.Migrations
 
                     b.HasIndex("OrderId");
 
+                    b.HasIndex("PrescriptionId");
+
                     b.ToTable("OrderItems");
+                });
+
+            modelBuilder.Entity("PharmacyOrder.Api.Models.OrderStockAllocation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("OrderItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("StockId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderItemId");
+
+                    b.HasIndex("StockId");
+
+                    b.ToTable("OrderStockAllocations");
                 });
 
             modelBuilder.Entity("PharmacyOrder.Api.Models.Prescription", b =>
@@ -346,6 +403,7 @@ namespace PharmacyOrder.Api.Migrations
                         .HasColumnType("decimal(65,30)");
 
                     b.Property<int>("Quantity")
+                        .IsConcurrencyToken()
                         .HasColumnType("int");
 
                     b.Property<decimal>("SellingPrice")
@@ -410,9 +468,35 @@ namespace PharmacyOrder.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("PharmacyOrder.Api.Models.Prescription", "Prescription")
+                        .WithMany()
+                        .HasForeignKey("PrescriptionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Medicine");
 
                     b.Navigation("Order");
+
+                    b.Navigation("Prescription");
+                });
+
+            modelBuilder.Entity("PharmacyOrder.Api.Models.OrderStockAllocation", b =>
+                {
+                    b.HasOne("PharmacyOrder.Api.Models.OrderItem", "OrderItem")
+                        .WithMany("Allocations")
+                        .HasForeignKey("OrderItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PharmacyOrder.Api.Models.Stock", "Stock")
+                        .WithMany()
+                        .HasForeignKey("StockId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("OrderItem");
+
+                    b.Navigation("Stock");
                 });
 
             modelBuilder.Entity("PharmacyOrder.Api.Models.Prescription", b =>
@@ -450,6 +534,11 @@ namespace PharmacyOrder.Api.Migrations
             modelBuilder.Entity("PharmacyOrder.Api.Models.Order", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("PharmacyOrder.Api.Models.OrderItem", b =>
+                {
+                    b.Navigation("Allocations");
                 });
 #pragma warning restore 612, 618
         }

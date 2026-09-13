@@ -32,6 +32,8 @@ public class InventoryService : IInventoryService
         var stock = await _db.Stocks.FindAsync(id) ?? throw new KeyNotFoundException("Stock batch was not found.");
         if (stock.MedicineId != request.MedicineId) throw new ArgumentException("A stock batch cannot be moved to another medicine.");
         await ValidateAsync(request, id); stock.BatchNumber = request.BatchNumber.Trim(); stock.Quantity = request.Quantity; stock.PurchasePrice = request.PurchasePrice; stock.SellingPrice = request.SellingPrice; stock.ManufacturingDate = request.ManufacturingDate; stock.ExpiryDate = request.ExpiryDate;
+        // Check the original quantity even for a no-op edit: checkout may have changed this batch.
+        _db.Entry(stock).Property(batch => batch.Quantity).IsModified = true;
         await PersistAsync(stock.MedicineId, stock); return ToDto(stock);
     }
     private async Task PersistAsync(int medicineId, Stock stock)

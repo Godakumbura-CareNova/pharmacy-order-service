@@ -4,7 +4,13 @@ public class Order
 {
     public int Id { get; set; }
 
-    public int CustomerId { get; set; }
+    public Guid CustomerId { get; set; }
+
+    public Guid RequestId { get; set; }
+
+    public string RequestFingerprint { get; set; } = string.Empty;
+
+    public string? RejectionReason { get; set; }
 
     public DateTime OrderDate { get; set; }
 

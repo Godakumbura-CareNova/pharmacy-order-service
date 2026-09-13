@@ -24,6 +24,8 @@ public class AppDbContext : DbContext
 
     public DbSet<OrderItem> OrderItems { get; set; }
 
+    public DbSet<OrderStockAllocation> OrderStockAllocations { get; set; }
+
     public DbSet<Prescription> Prescriptions { get; set; }
 
     public DbSet<EventOutbox> EventOutboxEntries { get; set; }
@@ -33,6 +35,22 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<Order>().HasIndex(order => new { order.CustomerId, order.RequestId }).IsUnique();
+        modelBuilder.Entity<Order>().Property(order => order.RequestFingerprint).HasMaxLength(64);
+        modelBuilder.Entity<Order>().Property(order => order.Status).IsConcurrencyToken();
+        modelBuilder.Entity<Order>().Property(order => order.RejectionReason).HasMaxLength(1000);
+        modelBuilder.Entity<OrderItem>().HasOne(item => item.Prescription).WithMany()
+            .HasForeignKey(item => item.PrescriptionId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<OrderStockAllocation>().HasOne(item => item.Stock).WithMany()
+            .HasForeignKey(item => item.StockId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Stock>().Property(stock => stock.Quantity).IsConcurrencyToken();
+        modelBuilder.Entity<Medicine>().Property(medicine => medicine.StockQuantity).IsConcurrencyToken();
+        modelBuilder.Entity<Medicine>().Property(medicine => medicine.Price).IsConcurrencyToken();
+        modelBuilder.Entity<Medicine>().Property(medicine => medicine.IsActive).IsConcurrencyToken();
+        modelBuilder.Entity<Medicine>().Property(medicine => medicine.PrescriptionRequired).IsConcurrencyToken();
+        modelBuilder.Entity<CartItem>().Property(item => item.Quantity).IsConcurrencyToken();
+        modelBuilder.Entity<CartItem>().Property(item => item.PrescriptionId).IsConcurrencyToken();
 
         modelBuilder.Entity<Medicine>()
             .Property(medicine => medicine.IsActive)
