@@ -110,6 +110,19 @@ public class OrderService
             _db.Orders.Add(order);
             _db.CartItems.RemoveRange(items);
             await _db.SaveChangesAsync(ct);
+            // The generated order ID and its event are saved before the same transaction commits.
+            var placedEvent = new OrderEvent(Guid.NewGuid(), EventTypes.OrderPlaced,
+                order.OrderDate, order.Id, "Order",
+                JsonSerializer.SerializeToElement(new { Status = order.Status.ToString() }));
+            _db.EventOutboxEntries.Add(new EventOutbox
+            {
+                EventId = placedEvent.EventId, Topic = EventTypes.OrderTopic,
+                EventType = placedEvent.EventType,
+                EventKey = order.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                OccurredAtUtc = placedEvent.OccurredAtUtc,
+                PayloadJson = JsonSerializer.Serialize(placedEvent)
+            });
+            await _db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
             return ToDto(order);
         }

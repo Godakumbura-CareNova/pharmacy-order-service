@@ -4,6 +4,8 @@ public static class EventTypes
 {
     public const string MedicineTopic = "carenova.medicine.events.v1";
     public const string InventoryTopic = "carenova.inventory.events.v1";
+    public const string OrderTopic = "carenova.order.events.v1";
+    public const string OrderPlaced = "OrderPlaced";
 
     public const string MedicineCreated = "MedicineCreated";
     public const string MedicineUpdated = "MedicineUpdated";

@@ -10,13 +10,64 @@ namespace PharmacyOrder.Api.Tests.Integration;
 
 public class PickupOrderTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Existing_catalogue_and_inventory_notifications_remain_idempotent(bool inventory)
+    {
+        await using var fixture = await Fixture.Create();
+        var eventId = Guid.NewGuid();
+        var data = System.Text.Json.JsonSerializer.SerializeToElement(new { });
+        var json = inventory
+            ? System.Text.Json.JsonSerializer.Serialize(new PharmacyOrder.Api.Events.InventoryEvent(
+                eventId, "InventoryUpdated", DateTime.UtcNow, 1, "Medicine", data))
+            : System.Text.Json.JsonSerializer.Serialize(new PharmacyOrder.Api.Events.MedicineEvent(
+                eventId, "MedicineCreated", DateTime.UtcNow, 1, "Medicine", data));
+        var topic = inventory ? "carenova.inventory.events.v1" : "carenova.medicine.events.v1";
+        var handler = new KafkaNotificationHandler(fixture.Db);
+        await handler.HandleAsync(topic, json);
+        await handler.HandleAsync(topic, json);
+        var notification = Assert.Single(await fixture.Db.StaffNotifications.ToListAsync());
+        Assert.Equal(eventId, notification.EventId);
+        Assert.Equal("Medicine", notification.RelatedEntityType);
+        Assert.Equal(1, notification.RelatedEntityId);
+    }
+
     [Fact]
-    public async Task Failure_after_saving_rolls_back_order_stock_cart_and_events()
+    public async Task Placement_queues_one_order_event_even_when_request_is_retried()
+    {
+        await using var fixture = await Fixture.Create();
+        var request = fixture.Request();
+        var order = await fixture.Service.PlaceAsync(fixture.Patient, request);
+        await fixture.Service.PlaceAsync(fixture.Patient, request);
+        var entry = Assert.Single(await fixture.Db.EventOutboxEntries
+            .Where(e => e.EventType == "OrderPlaced").ToListAsync());
+        Assert.Equal("carenova.order.events.v1", entry.Topic);
+        Assert.Equal(order.Id.ToString(), entry.EventKey);
+        using var json = System.Text.Json.JsonDocument.Parse(entry.PayloadJson);
+        Assert.Equal(order.Id, json.RootElement.GetProperty("AggregateId").GetInt32());
+        Assert.Equal("Pending", json.RootElement.GetProperty("Data").GetProperty("Status").GetString());
+        Assert.DoesNotContain(fixture.Patient.ToString(), entry.PayloadJson);
+        Assert.Null(entry.PublishedAtUtc);
+        var handler = new KafkaNotificationHandler(fixture.Db);
+        await handler.HandleAsync(entry.Topic, entry.PayloadJson);
+        await handler.HandleAsync(entry.Topic, entry.PayloadJson);
+        var notification = Assert.Single(await fixture.Db.StaffNotifications.ToListAsync());
+        Assert.Equal(entry.EventId, notification.EventId);
+        Assert.Equal(order.Id, notification.RelatedEntityId);
+        Assert.Equal("New order received", notification.Title);
+        Assert.Contains("pending pharmacy review", notification.Message);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task Failure_after_saving_rolls_back_order_stock_cart_and_events(int failOnSave)
     {
         await using var fixture = await Fixture.Create();
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseSqlite(fixture.Db.Database.GetDbConnection())
-            .AddInterceptors(new FailAfterSave()).Options;
+            .AddInterceptors(new FailAfterSave(failOnSave)).Options;
         await using var failingDb = new AppDbContext(options);
         await Assert.ThrowsAsync<IOException>(() => new OrderService(failingDb, new KafkaSettings())
             .PlaceAsync(fixture.Patient, fixture.Request()));
@@ -29,11 +80,16 @@ public class PickupOrderTests
         Assert.Equal(8, (await fixture.Db.Stocks.FindAsync(2))!.Quantity);
     }
 
-    private sealed class FailAfterSave : Microsoft.EntityFrameworkCore.Diagnostics.SaveChangesInterceptor
+    private sealed class FailAfterSave(int failOnSave) : Microsoft.EntityFrameworkCore.Diagnostics.SaveChangesInterceptor
     {
+        private int saves;
         public override ValueTask<int> SavedChangesAsync(
             Microsoft.EntityFrameworkCore.Diagnostics.SaveChangesCompletedEventData eventData, int result,
-            CancellationToken cancellationToken = default) => throw new IOException("Simulated failure before commit");
+            CancellationToken cancellationToken = default)
+        {
+            if (++saves == failOnSave) throw new IOException("Simulated failure before commit");
+            return ValueTask.FromResult(result);
+        }
     }
 
     [Fact]
