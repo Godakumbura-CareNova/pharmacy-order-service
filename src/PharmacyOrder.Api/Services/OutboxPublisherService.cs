@@ -24,6 +24,12 @@ public class OutboxPublisherService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        if (!_settings.Enabled)
+        {
+            _logger.LogInformation("Kafka is disabled (Kafka:Enabled=false); outbox events will stay queued until it is enabled.");
+            return;
+        }
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try

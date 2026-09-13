@@ -27,6 +27,12 @@ public class KafkaConsumerService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        if (!_settings.Enabled)
+        {
+            _logger.LogInformation("Kafka is disabled (Kafka:Enabled=false); staff notification consumer will not start.");
+            return;
+        }
+
         await Task.Yield();
 
         var consumerConfig = new ConsumerConfig
@@ -37,7 +43,12 @@ public class KafkaConsumerService : BackgroundService
             EnableAutoCommit = false
         };
 
-        using var consumer = new ConsumerBuilder<string, string>(consumerConfig).Build();
+        // Route librdkafka's stderr output through ILogger so a down broker shows up as
+        // a single warning instead of raw "%3|...|FAIL|rdkafka" lines in the console.
+        using var consumer = new ConsumerBuilder<string, string>(consumerConfig)
+            .SetLogHandler((_, message) => _logger.Log(ToLogLevel(message.Level), "Kafka consumer: {Message}", message.Message))
+            .SetErrorHandler((_, error) => _logger.LogWarning("Kafka consumer error {Code}: {Reason}", error.Code, error.Reason))
+            .Build();
         consumer.Subscribe(new[] { EventTypes.MedicineTopic, EventTypes.InventoryTopic });
 
         while (!stoppingToken.IsCancellationRequested)
@@ -79,6 +90,15 @@ public class KafkaConsumerService : BackgroundService
             }
         }
     }
+
+    private static LogLevel ToLogLevel(SyslogLevel level) => level switch
+    {
+        SyslogLevel.Emergency or SyslogLevel.Alert or SyslogLevel.Critical => LogLevel.Critical,
+        SyslogLevel.Error => LogLevel.Error,
+        SyslogLevel.Warning => LogLevel.Warning,
+        SyslogLevel.Notice or SyslogLevel.Info => LogLevel.Information,
+        _ => LogLevel.Debug
+    };
 
     private async Task CreateNotificationAsync(Guid eventId, string eventType, string entityType, int entityId, DateTime occurredAtUtc, CancellationToken cancellationToken)
     {
