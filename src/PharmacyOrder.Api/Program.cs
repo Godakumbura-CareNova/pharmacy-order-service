@@ -71,6 +71,9 @@ builder.Services.AddScoped<IInventoryService>(serviceProvider => new InventorySe
     serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<KafkaSettings>>().Value));
 builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 builder.Services.AddScoped<ICartService, CartService>();
+builder.Services.AddScoped<OrderService>(provider => new OrderService(
+    provider.GetRequiredService<AppDbContext>(),
+    provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<KafkaSettings>>().Value));
 builder.Services.AddScoped<IPrescriptionService, PrescriptionService>();
 builder.Services.AddHostedService<OutboxPublisherService>();
 builder.Services.AddHostedService<KafkaConsumerService>();
