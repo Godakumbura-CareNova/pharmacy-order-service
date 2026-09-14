@@ -20,5 +20,9 @@ public class Prescription
 
     public bool IsVerified { get; set; }
 
+    public string? DecisionReason { get; set; }
+
+    public DateTime? ReviewedAtUtc { get; set; }
+
     public DateTime UploadedAt { get; set; }
 }

@@ -31,6 +31,7 @@ public class AppDbContext : DbContext
     public DbSet<EventOutbox> EventOutboxEntries { get; set; }
 
     public DbSet<StaffNotification> StaffNotifications { get; set; }
+    public DbSet<PatientNotification> PatientNotifications { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -40,6 +41,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Order>().Property(order => order.RequestFingerprint).HasMaxLength(64);
         modelBuilder.Entity<Order>().Property(order => order.Status).IsConcurrencyToken();
         modelBuilder.Entity<Order>().Property(order => order.RejectionReason).HasMaxLength(1000);
+        modelBuilder.Entity<Prescription>().Property(prescription => prescription.DecisionReason).HasMaxLength(1000);
         modelBuilder.Entity<OrderItem>().HasOne(item => item.Prescription).WithMany()
             .HasForeignKey(item => item.PrescriptionId).OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<OrderStockAllocation>().HasOne(item => item.Stock).WithMany()
@@ -62,6 +64,9 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<StaffNotification>()
             .HasIndex(notification => notification.EventId)
+            .IsUnique();
+        modelBuilder.Entity<PatientNotification>()
+            .HasIndex(notification => new { notification.PatientId, notification.EventId })
             .IsUnique();
 
         modelBuilder.Entity<Stock>()

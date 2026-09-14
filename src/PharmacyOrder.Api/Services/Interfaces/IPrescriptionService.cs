@@ -8,5 +8,7 @@ public interface IPrescriptionService
 
     Task<IReadOnlyList<PrescriptionResponseDto>> GetForPatientAsync(Guid patientId);
 
+    Task DeletePendingAsync(Guid patientId, int prescriptionId, CancellationToken cancellationToken);
+
     Task<PrescriptionFileResult> GetOwnedFileAsync(Guid patientId, int prescriptionId);
 }

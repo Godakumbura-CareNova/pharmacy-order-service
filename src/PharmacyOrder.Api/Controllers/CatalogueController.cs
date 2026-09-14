@@ -19,10 +19,11 @@ public class CatalogueController : ControllerBase
     public async Task<ActionResult<PaginatedCatalogueResponseDto>> GetMedicines(
         [FromQuery] string? search,
         [FromQuery] int? categoryId,
+        [FromQuery] bool? inStock,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 12)
     {
-        return Ok(await _catalogue.GetMedicinesAsync(search, categoryId, page, pageSize));
+        return Ok(await _catalogue.GetMedicinesAsync(search, categoryId, inStock, page, pageSize));
     }
 
     [HttpGet("categories")]

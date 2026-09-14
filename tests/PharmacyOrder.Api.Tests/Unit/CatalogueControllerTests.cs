@@ -13,10 +13,10 @@ public class CatalogueControllerTests
     {
         var expected = new PaginatedCatalogueResponseDto { Page = 2, PageSize = 12, TotalCount = 13, TotalPages = 2 };
         var catalogue = new Mock<ICatalogueService>();
-        catalogue.Setup(service => service.GetMedicinesAsync("pain", 3, 2, 12)).ReturnsAsync(expected);
+        catalogue.Setup(service => service.GetMedicinesAsync("pain", 3, true, 2, 12)).ReturnsAsync(expected);
         var controller = new CatalogueController(catalogue.Object);
 
-        var result = await controller.GetMedicines("pain", 3, 2, 12);
+        var result = await controller.GetMedicines("pain", 3, true, 2, 12);
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         Assert.Same(expected, ok.Value);

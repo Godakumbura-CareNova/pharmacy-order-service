@@ -9,8 +9,13 @@ namespace PharmacyOrder.Api.Services;
 public class CartService : ICartService
 {
     private readonly AppDbContext _db;
+    private readonly IPrescriptionCleanupService? _prescriptions;
 
-    public CartService(AppDbContext db) => _db = db;
+    public CartService(AppDbContext db, IPrescriptionCleanupService? prescriptions = null)
+    {
+        _db = db;
+        _prescriptions = prescriptions;
+    }
 
     public Task<CartResponseDto> GetCartAsync(Guid patientId, CancellationToken cancellationToken) =>
         GetCartResponseAsync(patientId, cancellationToken);
@@ -69,9 +74,16 @@ public class CartService : ICartService
 
     public async Task<CartResponseDto> RemoveItemAsync(Guid patientId, int cartItemId, CancellationToken cancellationToken)
     {
-        var item = await _db.CartItems.SingleOrDefaultAsync(existingItem =>
+        var item = await _db.CartItems.Include(existingItem => existingItem.Prescription).SingleOrDefaultAsync(existingItem =>
             existingItem.Id == cartItemId && existingItem.Cart!.CustomerId == patientId,
             cancellationToken) ?? throw new KeyNotFoundException("Cart item was not found.");
+
+        if (item.Prescription?.Status == "PendingVerification")
+        {
+            if (_prescriptions is null) throw new InvalidOperationException("Prescription cleanup is not configured.");
+            await _prescriptions.DeletePendingAsync(patientId, item.PrescriptionId!.Value, cancellationToken);
+            return await GetCartResponseAsync(patientId, cancellationToken);
+        }
 
         _db.CartItems.Remove(item);
         await _db.SaveChangesAsync(cancellationToken);

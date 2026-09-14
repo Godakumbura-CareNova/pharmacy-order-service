@@ -55,4 +55,12 @@ public class FileStorageService : IFileStorageService
         var fileName = Path.GetFileName(storedPath);
         return Path.Combine(Path.GetFullPath(_prescriptionSettings.UploadPath), fileName);
     }
+
+    public Task DeletePrescriptionAsync(string storedPath, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var path = GetPrescriptionFilePath(storedPath);
+        if (File.Exists(path)) File.Delete(path);
+        return Task.CompletedTask;
+    }
 }

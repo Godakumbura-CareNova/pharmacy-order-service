@@ -11,7 +11,7 @@ public class CatalogueService : ICatalogueService
 
     public CatalogueService(AppDbContext db) => _db = db;
 
-    public async Task<PaginatedCatalogueResponseDto> GetMedicinesAsync(string? search, int? categoryId, int page, int pageSize)
+    public async Task<PaginatedCatalogueResponseDto> GetMedicinesAsync(string? search, int? categoryId, bool? inStock, int page, int pageSize)
     {
         var safePage = Math.Max(page, 1);
         var safePageSize = Math.Clamp(pageSize, 1, 12);
@@ -29,6 +29,7 @@ public class CatalogueService : ICatalogueService
         {
             query = query.Where(medicine => medicine.CategoryId == categoryId.Value);
         }
+        if (inStock.HasValue) query = query.Where(medicine => inStock.Value ? medicine.StockQuantity > 0 : medicine.StockQuantity == 0);
 
         var totalCount = await query.CountAsync();
         var items = await query

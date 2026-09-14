@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using PharmacyOrder.Api.Config;
 using PharmacyOrder.Api.Data;
+using PharmacyOrder.Api.Events;
 using PharmacyOrder.Api.DTOs.Order;
 using PharmacyOrder.Api.Models;
 using PharmacyOrder.Api.Services;
@@ -10,6 +11,19 @@ namespace PharmacyOrder.Api.Tests.Integration;
 
 public class PickupOrderTests
 {
+    [Fact]
+    public async Task Marking_an_order_ready_writes_one_status_event()
+    {
+        await using var fixture = await Fixture.Create();
+        var order = await fixture.Service.PlaceAsync(fixture.Patient, fixture.Request());
+
+        await fixture.Service.TransitionAsync(order.Id, OrderStatus.ReadyForCollection, null);
+
+        var entry = Assert.Single(await fixture.Db.EventOutboxEntries
+            .Where(item => item.EventType == EventTypes.OrderReadyForCollection).ToListAsync());
+        Assert.Equal(order.Id.ToString(), entry.EventKey);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -57,6 +71,25 @@ public class PickupOrderTests
         Assert.Equal(order.Id, notification.RelatedEntityId);
         Assert.Equal("New order received", notification.Title);
         Assert.Contains("pending pharmacy review", notification.Message);
+    }
+
+    [Fact]
+    public async Task Order_status_event_creates_one_patient_notification_for_the_order_owner()
+    {
+        await using var fixture = await Fixture.Create();
+        var order = await fixture.Service.PlaceAsync(fixture.Patient, fixture.Request());
+        await fixture.Service.TransitionAsync(order.Id, OrderStatus.ReadyForCollection, null);
+        var entry = Assert.Single(await fixture.Db.EventOutboxEntries
+            .Where(item => item.EventType == EventTypes.OrderReadyForCollection).ToListAsync());
+
+        var handler = new KafkaNotificationHandler(fixture.Db);
+        await handler.HandleAsync(entry.Topic, entry.PayloadJson);
+        await handler.HandleAsync(entry.Topic, entry.PayloadJson);
+
+        var notification = Assert.Single(await fixture.Db.PatientNotifications.ToListAsync());
+        Assert.Equal(fixture.Patient, notification.PatientId);
+        Assert.Equal("Your order is ready for collection", notification.Title);
+        Assert.Contains($"#{order.Id}", notification.Message);
     }
 
     [Theory]

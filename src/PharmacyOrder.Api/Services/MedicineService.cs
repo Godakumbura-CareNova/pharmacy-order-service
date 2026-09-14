@@ -47,6 +47,12 @@ public class MedicineService : IMedicineService
         medicine.IsActive = false; await _dbContext.SaveChangesAsync(); await AddEventAsync(EventTypes.MedicineDeactivated, medicine);
     }
 
+    public async Task ActivateAsync(int id)
+    {
+        var medicine = await _dbContext.Medicines.FindAsync(id) ?? throw new KeyNotFoundException("Medicine was not found.");
+        medicine.IsActive = true; await _dbContext.SaveChangesAsync(); await AddEventAsync(EventTypes.MedicineActivated, medicine);
+    }
+
     public async Task<MedicineResponseDto> UpdateImageAsync(int id, string imagePath)
     {
         var medicine = await _dbContext.Medicines.Include(item => item.Category).SingleOrDefaultAsync(item => item.Id == id) ?? throw new KeyNotFoundException("Medicine was not found.");

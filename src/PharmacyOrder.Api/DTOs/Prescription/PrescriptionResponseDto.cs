@@ -15,4 +15,8 @@ public class PrescriptionResponseDto
     public string Status { get; init; } = string.Empty;
 
     public DateTime UploadedAt { get; init; }
+
+    public string? DecisionReason { get; init; }
+
+    public DateTime? ReviewedAtUtc { get; init; }
 }

@@ -11,12 +11,14 @@ public class PrescriptionService : IPrescriptionService
     private readonly AppDbContext _db;
     private readonly IFileStorageService _files;
     private readonly ICartService _cart;
+    private readonly IPrescriptionCleanupService? _cleanup;
 
-    public PrescriptionService(AppDbContext db, IFileStorageService files, ICartService cart)
+    public PrescriptionService(AppDbContext db, IFileStorageService files, ICartService cart, IPrescriptionCleanupService? cleanup = null)
     {
         _db = db;
         _files = files;
         _cart = cart;
+        _cleanup = cleanup;
     }
 
     public async Task<PrescriptionResponseDto> UploadAsync(Guid patientId, PrescriptionUploadRequestDto request, CancellationToken cancellationToken)
@@ -62,9 +64,17 @@ public class PrescriptionService : IPrescriptionService
                 MedicineName = prescription.Medicine!.Name,
                 Quantity = prescription.Quantity,
                 Status = prescription.Status,
-                UploadedAt = prescription.UploadedAt
+                UploadedAt = prescription.UploadedAt,
+                DecisionReason = prescription.DecisionReason,
+                ReviewedAtUtc = prescription.ReviewedAtUtc
             })
             .ToListAsync();
+    }
+
+    public Task DeletePendingAsync(Guid patientId, int prescriptionId, CancellationToken cancellationToken)
+    {
+        if (_cleanup is null) throw new InvalidOperationException("Prescription cleanup is not configured.");
+        return _cleanup.DeletePendingAsync(patientId, prescriptionId, cancellationToken);
     }
 
     public async Task<PrescriptionFileResult> GetOwnedFileAsync(Guid patientId, int prescriptionId)
@@ -84,6 +94,8 @@ public class PrescriptionService : IPrescriptionService
         MedicineName = medicineName,
         Quantity = prescription.Quantity,
         Status = prescription.Status,
-        UploadedAt = prescription.UploadedAt
+        UploadedAt = prescription.UploadedAt,
+        DecisionReason = prescription.DecisionReason,
+        ReviewedAtUtc = prescription.ReviewedAtUtc
     };
 }

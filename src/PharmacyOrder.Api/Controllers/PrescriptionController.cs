@@ -35,6 +35,18 @@ public class PrescriptionController : ControllerBase
         return Ok(await _prescriptions.GetForPatientAsync(GetPatientId()));
     }
 
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> DeletePending(int id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _prescriptions.DeletePendingAsync(GetPatientId(), id, cancellationToken);
+            return NoContent();
+        }
+        catch (KeyNotFoundException) { return NotFound(); }
+        catch (InvalidOperationException exception) { return Conflict(new { message = exception.Message }); }
+    }
+
     [HttpGet("{id:int}/file")]
     public async Task<IActionResult> DownloadFile(int id)
     {

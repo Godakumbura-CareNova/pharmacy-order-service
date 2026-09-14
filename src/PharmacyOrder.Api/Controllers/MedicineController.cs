@@ -42,6 +42,13 @@ public class MedicineController : ControllerBase
         catch (KeyNotFoundException exception) { return NotFound(new { message = exception.Message }); }
     }
 
+    [HttpPatch("{id:int}/activate")]
+    public async Task<IActionResult> Activate(int id)
+    {
+        try { await _medicineService.ActivateAsync(id); return NoContent(); }
+        catch (KeyNotFoundException exception) { return NotFound(new { message = exception.Message }); }
+    }
+
     [HttpPost("{id:int}/image")]
     public async Task<ActionResult<MedicineResponseDto>> UploadImage(int id, [FromForm] IFormFile image, [FromServices] IFileStorageService fileStorage)
     {
