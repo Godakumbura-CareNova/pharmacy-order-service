@@ -14,6 +14,7 @@ public static class EventTypes
     public const string MedicineCreated = "MedicineCreated";
     public const string MedicineUpdated = "MedicineUpdated";
     public const string MedicineDeactivated = "MedicineDeactivated";
+    public const string MedicineActivated = "MedicineActivated";
     public const string CategoryCreated = "CategoryCreated";
     public const string CategoryUpdated = "CategoryUpdated";
     public const string CategoryDeleted = "CategoryDeleted";

@@ -8,5 +8,6 @@ public interface IMedicineService
     Task<MedicineResponseDto> CreateAsync(MedicineRequestDto request);
     Task<MedicineResponseDto> UpdateAsync(int id, MedicineRequestDto request);
     Task DeactivateAsync(int id);
+    Task ActivateAsync(int id);
     Task<MedicineResponseDto> UpdateImageAsync(int id, string imagePath);
 }

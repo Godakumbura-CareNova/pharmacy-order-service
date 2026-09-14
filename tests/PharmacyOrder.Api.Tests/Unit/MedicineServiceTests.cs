@@ -48,6 +48,22 @@ public class MedicineServiceTests
         Assert.Equal(EventTypes.MedicineDeactivated, (await dbContext.EventOutboxEntries.SingleAsync()).EventType);
     }
 
+    [Fact]
+    public async Task ActivateAsync_MarksMedicineActiveAndPublishesEvent()
+    {
+        await using var dbContext = CreateDbContext();
+        var category = new Category { Name = "Vitamins" };
+        var medicine = new Medicine { Name = "Vitamin C", Description = "Vitamin", Category = category, Price = 10m, IsActive = false };
+        dbContext.Medicines.Add(medicine);
+        await dbContext.SaveChangesAsync();
+        var service = new MedicineService(dbContext);
+
+        await service.ActivateAsync(medicine.Id);
+
+        Assert.True((await dbContext.Medicines.FindAsync(medicine.Id))!.IsActive);
+        Assert.Equal(EventTypes.MedicineActivated, (await dbContext.EventOutboxEntries.SingleAsync()).EventType);
+    }
+
     private static AppDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
