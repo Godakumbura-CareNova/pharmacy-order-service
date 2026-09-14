@@ -32,7 +32,7 @@ public class CatalogueServiceTests
         });
         await db.SaveChangesAsync();
 
-        var result = await new CatalogueService(db).GetMedicinesAsync("pain", category.Id, 1, 12);
+        var result = await new CatalogueService(db).GetMedicinesAsync("pain", category.Id, null, 1, 12);
 
         Assert.Equal(12, result.Items.Count);
         Assert.Equal(13, result.TotalCount);
@@ -56,7 +56,7 @@ public class CatalogueServiceTests
         });
         await db.SaveChangesAsync();
 
-        var result = await new CatalogueService(db).GetMedicinesAsync(null, null, 1, 12);
+        var result = await new CatalogueService(db).GetMedicinesAsync(null, null, null, 1, 12);
 
         Assert.Single(result.Items);
         Assert.Equal("Out of stock", result.Items[0].AvailabilityStatus);
