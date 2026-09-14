@@ -62,7 +62,9 @@ public class PrescriptionService : IPrescriptionService
                 MedicineName = prescription.Medicine!.Name,
                 Quantity = prescription.Quantity,
                 Status = prescription.Status,
-                UploadedAt = prescription.UploadedAt
+                UploadedAt = prescription.UploadedAt,
+                DecisionReason = prescription.DecisionReason,
+                ReviewedAtUtc = prescription.ReviewedAtUtc
             })
             .ToListAsync();
     }
@@ -84,6 +86,8 @@ public class PrescriptionService : IPrescriptionService
         MedicineName = medicineName,
         Quantity = prescription.Quantity,
         Status = prescription.Status,
-        UploadedAt = prescription.UploadedAt
+        UploadedAt = prescription.UploadedAt,
+        DecisionReason = prescription.DecisionReason,
+        ReviewedAtUtc = prescription.ReviewedAtUtc
     };
 }
