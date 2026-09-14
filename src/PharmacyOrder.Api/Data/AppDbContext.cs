@@ -31,6 +31,7 @@ public class AppDbContext : DbContext
     public DbSet<EventOutbox> EventOutboxEntries { get; set; }
 
     public DbSet<StaffNotification> StaffNotifications { get; set; }
+    public DbSet<PatientNotification> PatientNotifications { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -63,6 +64,9 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<StaffNotification>()
             .HasIndex(notification => notification.EventId)
+            .IsUnique();
+        modelBuilder.Entity<PatientNotification>()
+            .HasIndex(notification => new { notification.PatientId, notification.EventId })
             .IsUnique();
 
         modelBuilder.Entity<Stock>()

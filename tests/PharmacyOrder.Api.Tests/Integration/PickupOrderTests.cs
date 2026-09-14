@@ -73,6 +73,25 @@ public class PickupOrderTests
         Assert.Contains("pending pharmacy review", notification.Message);
     }
 
+    [Fact]
+    public async Task Order_status_event_creates_one_patient_notification_for_the_order_owner()
+    {
+        await using var fixture = await Fixture.Create();
+        var order = await fixture.Service.PlaceAsync(fixture.Patient, fixture.Request());
+        await fixture.Service.TransitionAsync(order.Id, OrderStatus.ReadyForCollection, null);
+        var entry = Assert.Single(await fixture.Db.EventOutboxEntries
+            .Where(item => item.EventType == EventTypes.OrderReadyForCollection).ToListAsync());
+
+        var handler = new KafkaNotificationHandler(fixture.Db);
+        await handler.HandleAsync(entry.Topic, entry.PayloadJson);
+        await handler.HandleAsync(entry.Topic, entry.PayloadJson);
+
+        var notification = Assert.Single(await fixture.Db.PatientNotifications.ToListAsync());
+        Assert.Equal(fixture.Patient, notification.PatientId);
+        Assert.Equal("Your order is ready for collection", notification.Title);
+        Assert.Contains($"#{order.Id}", notification.Message);
+    }
+
     [Theory]
     [InlineData(1)]
     [InlineData(2)]
