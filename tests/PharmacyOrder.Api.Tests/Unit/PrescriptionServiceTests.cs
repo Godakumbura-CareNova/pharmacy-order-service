@@ -94,6 +94,7 @@ public class PrescriptionServiceTests
 
     private sealed class FakeFileStorage : IFileStorageService
     {
+        public Task DeletePrescriptionAsync(string storedPath, CancellationToken cancellationToken) => Task.CompletedTask;
         public string GetPrescriptionFilePath(string storedPath) => storedPath;
         public Task<string> SaveMedicineImageAsync(IFormFile file, CancellationToken cancellationToken) => Task.FromResult("/uploads/medicines/image.png");
         public Task<string> SavePrescriptionAsync(IFormFile file, CancellationToken cancellationToken) => Task.FromResult("prescriptions/private.pdf");

@@ -3,6 +3,7 @@ using PharmacyOrder.Api.Data;
 using PharmacyOrder.Api.DTOs.Cart;
 using PharmacyOrder.Api.Models;
 using PharmacyOrder.Api.Services;
+using PharmacyOrder.Api.Services.Interfaces;
 
 namespace PharmacyOrder.Api.Tests.Unit;
 
@@ -197,6 +198,25 @@ public class CartServiceTests
     }
 
     [Fact]
+    public async Task RemoveItemAsync_RemovesTheLinkedPendingPrescription()
+    {
+        var patientId = Guid.NewGuid();
+        await using var db = CreateDbContext();
+        var medicine = new Medicine { Name = "Amoxicillin 250mg", Description = "Antibiotic", Price = 300m, IsActive = true, StockQuantity = 10, PrescriptionRequired = true };
+        var prescription = new Prescription { UploadedBy = patientId, Medicine = medicine, Quantity = 2, Status = "PendingVerification", FilePath = "prescriptions/doctor-note.pdf", OriginalFileName = "doctor-note.pdf" };
+        var cart = new Cart { CustomerId = patientId };
+        cart.Items.Add(new CartItem { Medicine = medicine, Prescription = prescription, Quantity = 2 });
+        db.Carts.Add(cart);
+        await db.SaveChangesAsync();
+        var service = new CartService(db, new PrescriptionCleanupService(db, new FakeFileStorage()));
+
+        await service.RemoveItemAsync(patientId, cart.Items.Single().Id, CancellationToken.None);
+
+        Assert.Empty(db.CartItems);
+        Assert.Empty(db.Prescriptions);
+    }
+
+    [Fact]
     public async Task AddPrescriptionItemAsync_AddsOwnedPendingPrescriptionToPendingSection()
     {
         var patientId = Guid.NewGuid();
@@ -230,5 +250,13 @@ public class CartServiceTests
             .Options;
 
         return new AppDbContext(options);
+    }
+
+    private sealed class FakeFileStorage : IFileStorageService
+    {
+        public Task DeletePrescriptionAsync(string storedPath, CancellationToken cancellationToken) => Task.CompletedTask;
+        public string GetPrescriptionFilePath(string storedPath) => storedPath;
+        public Task<string> SaveMedicineImageAsync(Microsoft.AspNetCore.Http.IFormFile file, CancellationToken cancellationToken) => Task.FromResult(string.Empty);
+        public Task<string> SavePrescriptionAsync(Microsoft.AspNetCore.Http.IFormFile file, CancellationToken cancellationToken) => Task.FromResult(string.Empty);
     }
 }

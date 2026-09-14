@@ -8,5 +8,7 @@ public interface IFileStorageService
 
     Task<string> SavePrescriptionAsync(IFormFile file, CancellationToken cancellationToken);
 
+    Task DeletePrescriptionAsync(string storedPath, CancellationToken cancellationToken);
+
     string GetPrescriptionFilePath(string storedPath);
 }
