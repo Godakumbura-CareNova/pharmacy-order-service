@@ -5,10 +5,12 @@ using PharmacyOrder.Api.Data;
 using PharmacyOrder.Api.DTOs.Staff;
 using PharmacyOrder.Api.Events;
 using PharmacyOrder.Api.Models;
+using PharmacyOrder.Api.DTOs.Prescription;
+using PharmacyOrder.Api.Services.Interfaces;
 
 namespace PharmacyOrder.Api.Services;
 
-public sealed class StaffPrescriptionService(AppDbContext db)
+public sealed class StaffPrescriptionService(AppDbContext db, IFileStorageService files)
 {
     public async Task<IReadOnlyList<StaffPrescriptionDto>> ListPendingAsync(CancellationToken ct = default) =>
         await db.Prescriptions.AsNoTracking().Include(item => item.Medicine)
@@ -65,6 +67,15 @@ public sealed class StaffPrescriptionService(AppDbContext db)
             db.ChangeTracker.Clear();
             throw;
         }
+    }
+
+    public async Task<PrescriptionFileResult> GetFileAsync(int id, CancellationToken ct = default)
+    {
+        var prescription = await db.Prescriptions.SingleOrDefaultAsync(item => item.Id == id, ct)
+            ?? throw new KeyNotFoundException("Prescription was not found.");
+        var physicalPath = files.GetPrescriptionFilePath(prescription.FilePath);
+        if (!File.Exists(physicalPath)) throw new KeyNotFoundException("Prescription file was not found.");
+        return new PrescriptionFileResult { PhysicalPath = physicalPath, OriginalFileName = prescription.OriginalFileName };
     }
 
     private static StaffPrescriptionDto ToDto(Prescription prescription) => new()

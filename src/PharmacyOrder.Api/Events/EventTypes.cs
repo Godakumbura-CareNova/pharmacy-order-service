@@ -7,6 +7,9 @@ public static class EventTypes
     public const string OrderTopic = "carenova.order.events.v1";
     public const string OrderPlaced = "OrderPlaced";
     public const string PrescriptionVerified = "PrescriptionVerified";
+    public const string OrderReadyForCollection = "OrderReadyForCollection";
+    public const string OrderRejected = "OrderRejected";
+    public const string OrderCollected = "OrderCollected";
 
     public const string MedicineCreated = "MedicineCreated";
     public const string MedicineUpdated = "MedicineUpdated";

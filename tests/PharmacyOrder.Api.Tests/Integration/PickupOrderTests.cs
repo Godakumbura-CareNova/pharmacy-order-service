@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using PharmacyOrder.Api.Config;
 using PharmacyOrder.Api.Data;
+using PharmacyOrder.Api.Events;
 using PharmacyOrder.Api.DTOs.Order;
 using PharmacyOrder.Api.Models;
 using PharmacyOrder.Api.Services;
@@ -10,6 +11,19 @@ namespace PharmacyOrder.Api.Tests.Integration;
 
 public class PickupOrderTests
 {
+    [Fact]
+    public async Task Marking_an_order_ready_writes_one_status_event()
+    {
+        await using var fixture = await Fixture.Create();
+        var order = await fixture.Service.PlaceAsync(fixture.Patient, fixture.Request());
+
+        await fixture.Service.TransitionAsync(order.Id, OrderStatus.ReadyForCollection, null);
+
+        var entry = Assert.Single(await fixture.Db.EventOutboxEntries
+            .Where(item => item.EventType == EventTypes.OrderReadyForCollection).ToListAsync());
+        Assert.Equal(order.Id.ToString(), entry.EventKey);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

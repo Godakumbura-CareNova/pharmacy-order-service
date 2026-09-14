@@ -161,7 +161,7 @@ public class OrderService
                 .SingleOrDefaultAsync(order => order.Id == id, ct) ?? throw new KeyNotFoundException("Order was not found.");
             if (order.Status == status) return ToDto(order);
             var allowed = order.Status == OrderStatus.Pending && (status == OrderStatus.ReadyForCollection || status == OrderStatus.Rejected) ||
-                order.Status == OrderStatus.ReadyForCollection && (status == OrderStatus.Collected || status == OrderStatus.Rejected);
+                order.Status == OrderStatus.ReadyForCollection && status == OrderStatus.Collected;
             if (!allowed) throw new InvalidOperationException("This order status change is not allowed.");
             if (status == OrderStatus.Rejected)
             {
@@ -179,6 +179,7 @@ public class OrderService
                 order.RejectionReason = reason.Trim();
             }
             order.Status = status;
+            AddOrderStatusEvent(order);
             await _db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
             return ToDto(order);
@@ -212,5 +213,24 @@ public class OrderService
                 PayloadJson = JsonSerializer.Serialize(new InventoryEvent(eventId, type, at, medicine.Id, "Inventory",
                     JsonSerializer.SerializeToElement(new { TotalQuantity = medicine.StockQuantity }))) });
         }
+    }
+
+    private void AddOrderStatusEvent(Order order)
+    {
+        var eventType = order.Status switch
+        {
+            OrderStatus.ReadyForCollection => EventTypes.OrderReadyForCollection,
+            OrderStatus.Rejected => EventTypes.OrderRejected,
+            OrderStatus.Collected => EventTypes.OrderCollected,
+            _ => throw new InvalidOperationException("This order status does not publish an event.")
+        };
+        var eventId = Guid.NewGuid();
+        var occurredAt = DateTime.UtcNow;
+        _db.EventOutboxEntries.Add(new EventOutbox
+        {
+            EventId = eventId, Topic = EventTypes.OrderTopic, EventType = eventType, EventKey = order.Id.ToString(), OccurredAtUtc = occurredAt,
+            PayloadJson = JsonSerializer.Serialize(new OrderEvent(eventId, eventType, occurredAt, order.Id, "Order",
+                JsonSerializer.SerializeToElement(new { Status = order.Status.ToString(), order.RejectionReason })))
+        });
     }
 }

@@ -6,6 +6,8 @@ using PharmacyOrder.Api.DTOs.Staff;
 using PharmacyOrder.Api.Events;
 using PharmacyOrder.Api.Models;
 using PharmacyOrder.Api.Services;
+using PharmacyOrder.Api.Services.Interfaces;
+using Moq;
 
 namespace PharmacyOrder.Api.Tests.Unit;
 
@@ -23,7 +25,7 @@ public class StaffPrescriptionServiceTests
         });
         await db.SaveChangesAsync();
 
-        var result = await new StaffPrescriptionService(db).DecideAsync(7,
+        var result = await new StaffPrescriptionService(db, Mock.Of<IFileStorageService>()).DecideAsync(7,
             new PrescriptionDecisionRequest { Decision = "Verified" });
 
         Assert.Equal("Verified", result.Status);
@@ -46,7 +48,7 @@ public class StaffPrescriptionServiceTests
         db.Prescriptions.Add(new Prescription { Id = 7, UploadedBy = Guid.NewGuid(), MedicineId = 4, Quantity = 2 });
         await db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<ArgumentException>(() => new StaffPrescriptionService(db).DecideAsync(7,
+        await Assert.ThrowsAsync<ArgumentException>(() => new StaffPrescriptionService(db, Mock.Of<IFileStorageService>()).DecideAsync(7,
             new PrescriptionDecisionRequest { Decision = decision, Reason = reason }));
 
         Assert.Equal("PendingVerification", (await db.Prescriptions.FindAsync(7))!.Status);
@@ -61,7 +63,7 @@ public class StaffPrescriptionServiceTests
         db.Prescriptions.Add(new Prescription { Id = 7, UploadedBy = Guid.NewGuid(), MedicineId = 4, Quantity = 2, Status = "Verified", IsVerified = true });
         await db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => new StaffPrescriptionService(db).DecideAsync(7,
+        await Assert.ThrowsAsync<InvalidOperationException>(() => new StaffPrescriptionService(db, Mock.Of<IFileStorageService>()).DecideAsync(7,
             new PrescriptionDecisionRequest { Decision = "Rejected", Reason = "Already reviewed" }));
 
         Assert.Empty(await db.EventOutboxEntries.ToListAsync());
