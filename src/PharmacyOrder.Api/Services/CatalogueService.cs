@@ -73,8 +73,8 @@ public class CatalogueService : ICatalogueService
     public async Task<CatalogueMedicineResponseDto> GetMedicineAsync(int id)
     {
         var medicine = await _db.Medicines.Include(item => item.Category)
-            .SingleOrDefaultAsync(item => item.Id == id && item.IsActive && item.StockQuantity > 0)
+            .SingleOrDefaultAsync(item => item.Id == id && item.IsActive)
             ?? throw new KeyNotFoundException("Medicine is unavailable.");
-        return new CatalogueMedicineResponseDto { Id = medicine.Id, Name = medicine.Name, Description = medicine.Description, CategoryId = medicine.CategoryId, CategoryName = medicine.Category!.Name, Price = medicine.Price, ImagePath = medicine.ImagePath, PrescriptionRequired = medicine.PrescriptionRequired, StockQuantity = medicine.StockQuantity, AvailabilityStatus = "Available" };
+        return new CatalogueMedicineResponseDto { Id = medicine.Id, Name = medicine.Name, Description = medicine.Description, CategoryId = medicine.CategoryId, CategoryName = medicine.Category!.Name, Price = medicine.Price, ImagePath = medicine.ImagePath, PrescriptionRequired = medicine.PrescriptionRequired, StockQuantity = medicine.StockQuantity, AvailabilityStatus = medicine.StockQuantity == 0 ? "Out of stock" : "Available" };
     }
 }

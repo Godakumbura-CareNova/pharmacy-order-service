@@ -92,6 +92,22 @@ public class CatalogueServiceTests
         Assert.Equal(5, result.StockQuantity);
     }
 
+    [Fact]
+    public async Task GetMedicineAsync_ReturnsActiveOutOfStockMedicineForDetails()
+    {
+        await using var db = CreateDbContext();
+        var category = new Category { Name = "Pain Relief" };
+        var medicine = new Medicine { Name = "Ibuprofen", Description = "Pain relief", Category = category, IsActive = true, StockQuantity = 0, Price = 200m };
+        db.Medicines.Add(medicine);
+        await db.SaveChangesAsync();
+
+        var result = await new CatalogueService(db).GetMedicineAsync(medicine.Id);
+
+        Assert.Equal("Ibuprofen", result.Name);
+        Assert.Equal(0, result.StockQuantity);
+        Assert.Equal("Out of stock", result.AvailabilityStatus);
+    }
+
     private static AppDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
