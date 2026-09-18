@@ -234,6 +234,29 @@ public class PharmacyOrderReviewIntegrationTests
         Assert.True(Assert.Single((await patient.GetFromJsonAsync<List<PatientNotificationDto>>("/api/patient-notifications"))!).IsRead);
     }
 
+    [Fact]
+    public async Task Pharmacy_staff_can_list_the_new_order_notification()
+    {
+        await using var app = await App.Create();
+        using var staff = app.Client("PharmacyStaff");
+        using (var scope = app.Scope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.StaffNotifications.Add(new StaffNotification
+            {
+                EventId = Guid.NewGuid(), NotificationType = EventTypes.OrderPlaced,
+                Title = "New order received", Message = "Order #1 is pending pharmacy review.",
+                RelatedEntityType = "Order", RelatedEntityId = 1, CreatedAtUtc = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var response = await staff.GetAsync("/api/staff/notifications");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("New order received", await response.Content.ReadAsStringAsync());
+    }
+
     // ---------- test host ----------
 
     private sealed class App : IAsyncDisposable
