@@ -41,26 +41,26 @@ public class MedicineDetailsIntegrationTests : IClassFixture<CatalogueApiFactory
         return body!["message"].ToString()!;
     }
 
-    // 1 — no token → 401
+    // Public details are available without a token.
     [Fact]
-    public async Task GetMedicine_WithoutToken_Returns401()
+    public async Task GetMedicine_WithoutToken_Returns200()
     {
         var id = await SeedMedicineIdAsync("IT-Detail-Anon", stock: 5);
 
         var response = await _factory.CreateClientAs(role: null).GetAsync($"{MedicinesUrl}/{id}");
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
-    // 2 — non-customer role → 403
+    // Read-only details are available to other roles too.
     [Fact]
-    public async Task GetMedicine_WithStaffRole_Returns403()
+    public async Task GetMedicine_WithStaffRole_Returns200()
     {
         var id = await SeedMedicineIdAsync("IT-Detail-Staff", stock: 5);
 
         var response = await _factory.CreateClientAs("PharmacyStaff").GetAsync($"{MedicinesUrl}/{id}");
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     // 3 — detail view returns every field the story asks for

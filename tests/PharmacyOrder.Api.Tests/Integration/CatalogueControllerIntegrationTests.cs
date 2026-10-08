@@ -21,26 +21,26 @@ public class CatalogueControllerIntegrationTests : IClassFixture<CatalogueApiFac
     private Task<PaginatedCatalogueResponseDto?> GetPageAsync(string query = "") =>
         _patient.GetFromJsonAsync<PaginatedCatalogueResponseDto>($"{MedicinesUrl}{query}");
 
-    // 1 — a visitor without a token cannot browse
+    // Public catalogue reads use the same responses as patient browsing.
     [Fact]
-    public async Task GetMedicines_WithoutToken_Returns401()
+    public async Task GetMedicines_WithoutToken_Returns200()
     {
         var anonymous = _factory.CreateClientAs(role: null);
 
         var response = await anonymous.GetAsync(MedicinesUrl);
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
-    // 2 — the catalogue is a customer (Patient) endpoint; other roles are refused
+    // Browsing is available to signed-in users of other roles too.
     [Fact]
-    public async Task GetMedicines_WithNonPatientRole_Returns403()
+    public async Task GetMedicines_WithNonPatientRole_Returns200()
     {
         var staff = _factory.CreateClientAs("PharmacyStaff");
 
         var response = await staff.GetAsync(MedicinesUrl);
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     // 3 — listing returns the basic details a customer needs
