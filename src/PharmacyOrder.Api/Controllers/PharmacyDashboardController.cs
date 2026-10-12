@@ -10,6 +10,14 @@ namespace PharmacyOrder.Api.Controllers;
 [ApiController]
 public sealed class PharmacyDashboardController(PharmacyDashboardService service) : ControllerBase
 {
+    [Authorize(Roles = "Admin")]
+    [HttpGet("api/admin/dashboard/operations")]
+    public async Task<IActionResult> Admin(CancellationToken ct)
+    {
+        try { return Ok(await service.GetAdminOperationsAsync(ct)); }
+        catch (DbException) { return StatusCode(503, new { message = "Pharmacy information is unavailable. Please retry." }); }
+    }
+
     [Authorize(Policy = AuthorizationPolicies.Patient)]
     [HttpGet("api/patient/dashboard/orders")]
     public async Task<IActionResult> Patient(CancellationToken ct)

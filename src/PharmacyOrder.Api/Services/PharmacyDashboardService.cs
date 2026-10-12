@@ -25,14 +25,29 @@ public sealed class PharmacyDashboardService(AppDbContext db, IOptions<KafkaSett
         var prescriptionCount = await prescriptions.CountAsync(ct);
         var prescriptionRows = await prescriptions.OrderBy(p => p.UploadedAt).ThenBy(p => p.Id).Take(5)
             .Select(p => new { p.Id, MedicineName = p.Medicine!.Name, p.Quantity, p.UploadedAt, p.Status }).ToListAsync(ct);
+        var stock = await LowStock(ct);
+        return new(pending, new(prescriptionCount, prescriptionRows.Select(p => new DashboardPrescription(
+            p.Id, p.MedicineName, p.Quantity, Utc(p.UploadedAt), p.Status)).ToArray()),
+            stock, ready, DateTime.UtcNow);
+    }
+
+    public async Task<AdminOperationsDashboardDto> GetAdminOperationsAsync(CancellationToken ct)
+    {
+        var groups = await db.Orders.AsNoTracking().GroupBy(o => o.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() }).ToListAsync(ct);
+        var rows = await db.Orders.AsNoTracking().OrderByDescending(o => o.OrderDate).ThenByDescending(o => o.Id).Take(5).ToListAsync(ct);
+        return new(groups.Sum(g => g.Count), groups.ToDictionary(g => g.Status.ToString(), g => g.Count),
+            rows.Select(ToOrder).ToArray(), await LowStock(ct), DateTime.UtcNow);
+    }
+
+    private async Task<DashboardQueue<DashboardStock>> LowStock(CancellationToken ct)
+    {
         var threshold = settings.Value.LowStockThreshold;
         var stock = db.Medicines.AsNoTracking().Where(m => m.IsActive && m.StockQuantity <= threshold);
         var stockCount = await stock.CountAsync(ct);
         var stockRows = await stock.OrderBy(m => m.StockQuantity).ThenBy(m => m.Name).ThenBy(m => m.Id).Take(5)
             .Select(m => new DashboardStock(m.Id, m.Name, m.StockQuantity, threshold)).ToListAsync(ct);
-        return new(pending, new(prescriptionCount, prescriptionRows.Select(p => new DashboardPrescription(
-            p.Id, p.MedicineName, p.Quantity, Utc(p.UploadedAt), p.Status)).ToArray()),
-            new(stockCount, stockRows), ready, DateTime.UtcNow);
+        return new(stockCount, stockRows);
     }
 
     private async Task<DashboardQueue<DashboardOrder>> Orders(OrderStatus status, bool oldestFirst, CancellationToken ct)
