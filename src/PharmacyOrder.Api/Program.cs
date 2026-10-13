@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Prometheus;
 using PharmacyOrder.Api.Config;
 using PharmacyOrder.Api.Data;
 using PharmacyOrder.Api.Security;
@@ -107,7 +108,9 @@ app.UseCors("FrontendPolicy");
 app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseHttpMetrics();
 
 app.MapControllers();
+app.MapMetrics();
 
 app.Run();
