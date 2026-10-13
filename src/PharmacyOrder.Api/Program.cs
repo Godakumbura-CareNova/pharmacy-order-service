@@ -77,6 +77,7 @@ builder.Services.AddScoped<OrderService>(provider => new OrderService(
     provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<KafkaSettings>>().Value));
 builder.Services.AddScoped<IPrescriptionService, PrescriptionService>();
 builder.Services.AddScoped<StaffPrescriptionService>();
+builder.Services.AddScoped<PharmacyDashboardService>();
 builder.Services.AddScoped<StaffOrderService>(provider => new StaffOrderService(
     provider.GetRequiredService<AppDbContext>(),
     provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<KafkaSettings>>().Value));

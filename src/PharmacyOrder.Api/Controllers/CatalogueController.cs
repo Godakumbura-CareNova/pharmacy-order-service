@@ -16,6 +16,7 @@ public class CatalogueController : ControllerBase
     public CatalogueController(ICatalogueService catalogue) => _catalogue = catalogue;
 
     [HttpGet("medicines")]
+    [AllowAnonymous]
     public async Task<ActionResult<PaginatedCatalogueResponseDto>> GetMedicines(
         [FromQuery] string? search,
         [FromQuery] int? categoryId,
@@ -27,12 +28,14 @@ public class CatalogueController : ControllerBase
     }
 
     [HttpGet("categories")]
+    [AllowAnonymous]
     public async Task<ActionResult<IReadOnlyList<CatalogueCategoryResponseDto>>> GetCategories()
     {
         return Ok(await _catalogue.GetCategoriesAsync());
     }
 
     [HttpGet("medicines/{id:int}")]
+    [AllowAnonymous]
     public async Task<ActionResult<CatalogueMedicineResponseDto>> GetMedicine(int id)
     {
         try { return Ok(await _catalogue.GetMedicineAsync(id)); }
