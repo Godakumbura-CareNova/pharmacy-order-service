@@ -50,7 +50,7 @@ public class MedicineController : ControllerBase
     }
 
     [HttpPost("{id:int}/image")]
-    public async Task<ActionResult<MedicineResponseDto>> UploadImage(int id, [FromForm] IFormFile image, [FromServices] IFileStorageService fileStorage)
+    public async Task<ActionResult<MedicineResponseDto>> UploadImage(int id, IFormFile image, [FromServices] IFileStorageService fileStorage)
     {
         try { var path = await fileStorage.SaveMedicineImageAsync(image, HttpContext.RequestAborted); return Ok(await _medicineService.UpdateImageAsync(id, path)); }
         catch (KeyNotFoundException exception) { return NotFound(new { message = exception.Message }); }
