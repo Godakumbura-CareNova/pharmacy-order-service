@@ -1,0 +1,339 @@
+name: SE3112 Test Automation Pipeline
+
+# Push to an SE3112 feature branch: fast checks with no deployed environment (unit & mocking, code quality).
+# Push to the group branch feature/SE3112-testing-automation, any pull request, or a manual run:
+# all four testing layers, including load and UI/E2E tests against the deployed Azure environment.
+on:
+  push:
+    branches:
+      - "feature/SE3112-**"
+  pull_request:
+    branches:
+      - dev
+      - feature/SE3112-testing-automation
+  workflow_dispatch:
+    inputs:
+      run_load:
+        description: "Run load & performance tests (JMeter) against the deployed pharmacy service"
+        type: boolean
+        default: true
+      load_profile:
+        description: "Load profile"
+        type: choice
+        options: [Smoke, Normal, Higher]
+        default: Smoke
+      run_ui:
+        description: "Run UI / E2E tests (Selenium) against the deployed frontend"
+        type: boolean
+        default: true
+      frontend_ref:
+        description: "Frontend branch that holds the Selenium tests"
+        type: string
+        default: feature/SE3112-ui-e2e-testing
+
+concurrency:
+  group: se3112-pipeline-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+
+env:
+  DOTNET_VERSION: "8.0.x"
+  DOTNET_NOLOGO: "true"
+  PHARMACY_URL: https://carenova-pharmacy-order-aegsa8hxffcqephb.centralindia-01.azurewebsites.net
+  FRONTEND_URL: https://carenova-frontend-avh6beggfqapfjfb.centralindia-01.azurewebsites.net
+  LOAD_SEARCH_TERM: Paracetamol 500mg
+
+jobs:
+  unit-mocking:
+    name: Unit Testing & Mocking
+    runs-on: ubuntu-latest
+    outputs:
+      total: ${{ steps.result.outputs.total }}
+      passed: ${{ steps.result.outputs.passed }}
+      failed: ${{ steps.result.outputs.failed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Run unit and mocking tests (xUnit + Moq)
+        run: >
+          dotnet test tests/unit-mocking/PharmacyOrder.UnitMocking.Tests.csproj
+          --configuration Release
+          --logger "trx;LogFileName=unit-mocking.trx"
+          --logger "console;verbosity=normal"
+          --results-directory TestResults/unit-mocking
+
+      - name: Read test counts
+        id: result
+        if: always()
+        shell: pwsh
+        run: |
+          $trx = Get-ChildItem TestResults/unit-mocking -Recurse -Filter *.trx | Select-Object -First 1
+          if (-not $trx) { exit 0 }
+          $counters = ([xml](Get-Content $trx.FullName -Raw)).TestRun.ResultSummary.Counters
+          "total=$($counters.total)" >> $env:GITHUB_OUTPUT
+          "passed=$($counters.passed)" >> $env:GITHUB_OUTPUT
+          "failed=$($counters.failed)" >> $env:GITHUB_OUTPUT
+
+      - name: Publish test report
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Unit & Mocking test results
+          path: TestResults/unit-mocking/*.trx
+          reporter: dotnet-trx
+          fail-on-error: false
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-mocking-results
+          path: TestResults/unit-mocking
+          if-no-files-found: warn
+
+  code-quality:
+    name: Code Quality & Metrics
+    runs-on: windows-latest
+    outputs:
+      passed: ${{ steps.result.outputs.passed }}
+      line: ${{ steps.result.outputs.line }}
+      branch: ${{ steps.result.outputs.branch }}
+      warnings: ${{ steps.result.outputs.warnings }}
+      tests: ${{ steps.result.outputs.tests }}
+      sonar: ${{ steps.sonar.outcome }}
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Static analysis, coverage and quality gate
+        shell: powershell
+        run: .\tests\quality\run-quality.ps1 -OutputRoot quality-results
+
+      - name: Read quality metrics
+        id: result
+        if: always()
+        shell: pwsh
+        run: |
+          $file = Get-ChildItem quality-results -Recurse -Filter summary.json -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $file) { exit 0 }
+          $s = Get-Content $file.FullName -Raw | ConvertFrom-Json
+          "passed=$($s.Passed)" >> $env:GITHUB_OUTPUT
+          "line=$([math]::Round([double]$s.LineCoveragePercent, 1))" >> $env:GITHUB_OUTPUT
+          "branch=$([math]::Round([double]$s.BranchCoveragePercent, 1))" >> $env:GITHUB_OUTPUT
+          "warnings=$($s.AnalyzerWarnings)" >> $env:GITHUB_OUTPUT
+          "tests=$($s.TestsPassed)/$($s.TestsTotal)" >> $env:GITHUB_OUTPUT
+
+      - name: Upload quality reports (coverage HTML, SARIF, analyzer findings)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-quality-results
+          path: quality-results
+          if-no-files-found: warn
+
+      # SonarQube runs only when a reachable server is configured as repository secrets.
+      - name: SonarQube analysis
+        id: sonar
+        if: env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != ''
+        shell: pwsh
+        run: |
+          dotnet tool install --global dotnet-sonarscanner
+          dotnet sonarscanner begin /k:CareNova-Pharmacy-Order-Service /d:sonar.host.url="$env:SONAR_HOST_URL" /d:sonar.token="$env:SONAR_TOKEN" `
+            "/d:sonar.coverage.exclusions=**/Migrations/**" "/d:sonar.cs.opencover.reportsPaths=**/coverage.opencover.xml"
+          dotnet build PharmacyOrder.sln --configuration Release --no-incremental
+          dotnet test PharmacyOrder.sln --configuration Release --no-build --results-directory sonar-coverage `
+            --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+          dotnet sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
+
+  load-performance:
+    name: Load & Performance Testing
+    if: (github.event_name == 'workflow_dispatch' && inputs.run_load) || github.event_name == 'pull_request' || github.ref == 'refs/heads/feature/SE3112-testing-automation'
+    runs-on: windows-latest
+    outputs:
+      passed: ${{ steps.result.outputs.passed }}
+      samples: ${{ steps.result.outputs.samples }}
+      p95: ${{ steps.result.outputs.p95 }}
+      errors: ${{ steps.result.outputs.errors }}
+      profile: ${{ inputs.load_profile || 'Smoke' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Apache JMeter 5.6.3
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.6.3.zip -OutFile jmeter.zip
+          Expand-Archive jmeter.zip -DestinationPath $env:RUNNER_TEMP
+          "JMETER_PATH=$env:RUNNER_TEMP\apache-jmeter-5.6.3\bin\jmeter.bat" >> $env:GITHUB_ENV
+
+      # A missed response-time target is a performance finding, reported below; it fails the job
+      # only when the test itself could not run or requests failed.
+      - name: Run load test against the deployed pharmacy service
+        continue-on-error: true
+        shell: powershell
+        run: >
+          .\tests\performance\ase\run-load-tests.ps1
+          -Profile ${{ inputs.load_profile || 'Smoke' }}
+          -BaseUrl $env:PHARMACY_URL
+          -SearchTerm "$env:LOAD_SEARCH_TERM"
+          -ReadinessAttempts 3 -ReadinessTimeoutSec 60
+          -OutputRoot load-results
+
+      - name: Read load metrics
+        id: result
+        if: always()
+        shell: pwsh
+        run: |
+          $file = Get-ChildItem load-results -Recurse -Filter summary.json -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $file) { Write-Host '::error::The load test produced no summary.'; exit 1 }
+          $s = Get-Content $file.FullName -Raw | ConvertFrom-Json
+          "passed=$($s.Passed)" >> $env:GITHUB_OUTPUT
+          "samples=$($s.Samples)" >> $env:GITHUB_OUTPUT
+          if ($s.Stage -ne 'Completed') { Write-Host "::error::Load test did not complete ($($s.Stage)): $($s.Error)"; exit 1 }
+          $errors = (@($s.Endpoints) | Measure-Object Failed -Sum).Sum
+          "p95=$((@($s.Endpoints) | Measure-Object P95Ms -Maximum).Maximum)" >> $env:GITHUB_OUTPUT
+          "errors=$errors" >> $env:GITHUB_OUTPUT
+          if ($errors -gt 0) { Write-Host "::error::$errors load test requests failed."; exit 1 }
+          if (-not $s.Passed) { Write-Host '::warning::Performance gate not met: an endpoint p95 exceeded 1000 ms. See the JMeter dashboard.' }
+
+      - name: Upload JMeter HTML dashboard and samples
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-performance-results
+          path: load-results
+          if-no-files-found: warn
+
+  ui-e2e:
+    name: UI / E2E Testing
+    if: (github.event_name == 'workflow_dispatch' && inputs.run_ui) || github.event_name == 'pull_request' || github.ref == 'refs/heads/feature/SE3112-testing-automation'
+    runs-on: ubuntu-latest
+    outputs:
+      total: ${{ steps.result.outputs.total }}
+      passed: ${{ steps.result.outputs.passed }}
+      failed: ${{ steps.result.outputs.failed }}
+    env:
+      CARENOVA_FRONTEND_URL: ${{ vars.CARENOVA_FRONTEND_URL || 'https://carenova-frontend-avh6beggfqapfjfb.centralindia-01.azurewebsites.net' }}
+      CARENOVA_TEST_PATIENT_EMAIL: ${{ secrets.CARENOVA_TEST_PATIENT_EMAIL }}
+      CARENOVA_TEST_PATIENT_PASSWORD: ${{ secrets.CARENOVA_TEST_PATIENT_PASSWORD }}
+      CARENOVA_TEST_STAFF_EMAIL: ${{ secrets.CARENOVA_TEST_STAFF_EMAIL }}
+      CARENOVA_TEST_STAFF_PASSWORD: ${{ secrets.CARENOVA_TEST_STAFF_PASSWORD }}
+    steps:
+      - name: Check test account secrets
+        run: |
+          for name in CARENOVA_TEST_PATIENT_EMAIL CARENOVA_TEST_PATIENT_PASSWORD CARENOVA_TEST_STAFF_EMAIL CARENOVA_TEST_STAFF_PASSWORD; do
+            if [ -z "${!name}" ]; then echo "::error::Repository secret $name is not set. See README > SE3112 Test Automation."; missing=1; fi
+          done
+          exit ${missing:-0}
+
+      - name: Check out Selenium tests from the frontend repository
+        uses: actions/checkout@v4
+        with:
+          repository: Godakumbura-CareNova/frontend
+          ref: ${{ inputs.frontend_ref || 'feature/SE3112-ui-e2e-testing' }}
+          path: frontend
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # Chrome is preinstalled on the runner; xvfb provides a virtual display for the browser.
+      - name: Run Selenium E2E tests (patient purchase and pharmacy staff journeys)
+        run: >
+          xvfb-run --auto-servernum dotnet test frontend/tests/selenium/selenium.csproj
+          --filter "FullyQualifiedName~ASEPatientPurchaseE2ETests|FullyQualifiedName~ASEPharmacyStaffE2ETests"
+          --logger "trx;LogFileName=ui-e2e.trx"
+          --logger "console;verbosity=normal"
+          --results-directory TestResults/ui-e2e
+
+      - name: Read test counts
+        id: result
+        if: always()
+        shell: pwsh
+        run: |
+          $trx = Get-ChildItem TestResults/ui-e2e -Recurse -Filter *.trx -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $trx) { exit 0 }
+          $counters = ([xml](Get-Content $trx.FullName -Raw)).TestRun.ResultSummary.Counters
+          "total=$($counters.total)" >> $env:GITHUB_OUTPUT
+          "passed=$($counters.passed)" >> $env:GITHUB_OUTPUT
+          "failed=$($counters.failed)" >> $env:GITHUB_OUTPUT
+
+      - name: Publish test report
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: UI & E2E test results
+          path: TestResults/ui-e2e/*.trx
+          reporter: dotnet-trx
+          fail-on-error: false
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-e2e-results
+          path: TestResults/ui-e2e
+          if-no-files-found: warn
+
+  report:
+    name: Unified Test Report
+    if: always()
+    needs: [unit-mocking, code-quality, load-performance, ui-e2e]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build unified report
+        env:
+          UNIT_RESULT: ${{ needs.unit-mocking.result }}
+          UNIT_DETAIL: "${{ needs.unit-mocking.outputs.passed }}/${{ needs.unit-mocking.outputs.total }} tests passed"
+          QUALITY_RESULT: ${{ needs.code-quality.result }}
+          QUALITY_DETAIL: "${{ needs.code-quality.outputs.line }}% line, ${{ needs.code-quality.outputs.branch }}% branch coverage; ${{ needs.code-quality.outputs.warnings }} analyzer warnings; ${{ needs.code-quality.outputs.tests }} tests; SonarQube: "
+          SONAR_OUTCOME: ${{ needs.code-quality.outputs.sonar }}
+          LOAD_RESULT: ${{ needs.load-performance.result }}
+          LOAD_GATE: ${{ needs.load-performance.outputs.passed }}
+          LOAD_DETAIL: "${{ needs.load-performance.outputs.profile }} profile: ${{ needs.load-performance.outputs.samples }} samples, ${{ needs.load-performance.outputs.errors }} errors, max p95 ${{ needs.load-performance.outputs.p95 }} ms"
+          UI_RESULT: ${{ needs.ui-e2e.result }}
+          UI_DETAIL: "${{ needs.ui-e2e.outputs.passed }}/${{ needs.ui-e2e.outputs.total }} tests passed"
+        run: |
+          icon() { case "$1" in success) echo "✅ Passed";; failure) echo "❌ Failed";; skipped) echo "⏭️ Not run";; *) echo "⚠️ $1";; esac; }
+          detail() { [ "$1" = "skipped" ] && echo "Runs on the group branch, pull requests and manual runs" || echo "$2"; }
+          [ "$SONAR_OUTCOME" = "success" ] && QUALITY_DETAIL="${QUALITY_DETAIL}passed" || QUALITY_DETAIL="${QUALITY_DETAIL}not run (no server configured)"
+          {
+            echo "# SE3112 Test Automation Report"
+            echo
+            echo "Service under test: **pharmacy-order-service** (CareNova) · Trigger: \`${{ github.event_name }}\` · Commit: \`${GITHUB_SHA::7}\`"
+            echo
+            echo "| Testing area | Owner | Tool | Result | Key metrics |"
+            echo "|---|---|---|---|---|"
+            echo "| Unit Testing & Mocking | Minadi Pathirana (IT24101496) | xUnit, Moq, EF Core InMemory | $(icon $UNIT_RESULT) | $(detail $UNIT_RESULT "$UNIT_DETAIL") |"
+            echo "| Code Quality & Metrics | MGND Kumara (IT24101515) | .NET analyzers, Coverlet, ReportGenerator, SonarQube | $(icon $QUALITY_RESULT) | $(detail $QUALITY_RESULT "$QUALITY_DETAIL") |"
+            LOAD_ICON=$(icon $LOAD_RESULT); [ "$LOAD_RESULT" = "success" ] && [ "$LOAD_GATE" = "False" ] && LOAD_ICON="⚠️ Ran, p95 target (1000 ms) not met"
+            echo "| Load & Performance Testing | HYP Silva (IT24101493) | Apache JMeter | $LOAD_ICON | $(detail $LOAD_RESULT "$LOAD_DETAIL") |"
+            echo "| UI / E2E Testing | leesha2110 | Selenium WebDriver, NUnit | $(icon $UI_RESULT) | $(detail $UI_RESULT "$UI_DETAIL") |"
+            echo
+            echo "Detailed reports (coverage HTML, SARIF, JMeter dashboard, TRX files) are attached to this run as artifacts."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail if any testing layer failed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "::error::One or more testing layers failed. See the report above."
+          exit 1
