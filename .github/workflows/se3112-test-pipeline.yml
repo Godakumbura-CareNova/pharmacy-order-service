@@ -245,6 +245,9 @@ jobs:
           done
           exit ${missing:-0}
 
+      # The test reporter needs the workspace to be a git repository.
+      - uses: actions/checkout@v4
+
       - name: Check out Selenium tests from the frontend repository
         uses: actions/checkout@v4
         with:
