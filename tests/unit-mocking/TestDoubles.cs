@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Moq;
 using PharmacyOrder.Api.Data;
 
-namespace PharmacyOrder.Api.Tests.UnitMocking;
+namespace PharmacyOrder.UnitMocking.Tests;
 
 // shared test doubles
 internal static class TestDoubles

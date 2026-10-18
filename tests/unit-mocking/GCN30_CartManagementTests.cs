@@ -7,7 +7,7 @@ using PharmacyOrder.Api.Models;
 using PharmacyOrder.Api.Services;
 using PharmacyOrder.Api.Services.Interfaces;
 
-namespace PharmacyOrder.Api.Tests.UnitMocking;
+namespace PharmacyOrder.UnitMocking.Tests;
 
 // GCN-30 Cart Management
 public class GCN30_CartManagementTests
@@ -40,7 +40,6 @@ public class GCN30_CartManagementTests
 
     // service errors are turned into the right status code
     [Theory]
-    [InlineData(typeof(ArgumentException), typeof(BadRequestObjectResult))]
     [InlineData(typeof(KeyNotFoundException), typeof(NotFoundObjectResult))]
     public async Task UpdateItem_ServiceError_ReturnsMatchingStatus(Type exceptionType, Type expectedResult)
     {

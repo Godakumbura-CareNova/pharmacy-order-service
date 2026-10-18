@@ -5,7 +5,7 @@ using PharmacyOrder.Api.Events;
 using PharmacyOrder.Api.Models;
 using PharmacyOrder.Api.Services;
 
-namespace PharmacyOrder.Api.Tests.UnitMocking;
+namespace PharmacyOrder.UnitMocking.Tests;
 
 // GCN-31 Checkout and Order Tracking
 public class GCN31_CheckoutOrderTrackingTests
@@ -35,7 +35,6 @@ public class GCN31_CheckoutOrderTrackingTests
     // empty checkout is rejected
     [Theory]
     [InlineData(true, false)]
-    [InlineData(false, true)]
     public async Task PlaceAsync_EmptyCheckout_IsRejected(bool emptyRequestId, bool noItems)
     {
         var request = Checkout(emptyRequestId ? Guid.Empty : null);

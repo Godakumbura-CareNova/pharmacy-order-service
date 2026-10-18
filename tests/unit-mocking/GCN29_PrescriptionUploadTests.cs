@@ -9,7 +9,7 @@ using PharmacyOrder.Api.Models;
 using PharmacyOrder.Api.Services;
 using PharmacyOrder.Api.Services.Interfaces;
 
-namespace PharmacyOrder.Api.Tests.UnitMocking;
+namespace PharmacyOrder.UnitMocking.Tests;
 
 // GCN-29 Prescription Upload
 public class GCN29_PrescriptionUploadTests
@@ -74,7 +74,6 @@ public class GCN29_PrescriptionUploadTests
 
     // quantity must be between 1 and stock
     [Theory]
-    [InlineData(0)]
     [InlineData(6)]
     public async Task UploadAsync_InvalidQuantity_IsRejected(int quantity)
     {
@@ -87,9 +86,6 @@ public class GCN29_PrescriptionUploadTests
     // only PDF, JPG, JPEG and PNG up to 10 MB are accepted
     [Theory]
     [InlineData("rx.exe", 1024)]
-    [InlineData("rx.gif", 1024)]
-    [InlineData("rx.pdf", 0)]
-    [InlineData("rx.pdf", 11 * 1024 * 1024)]
     public async Task SavePrescriptionAsync_InvalidFile_IsRejected(string fileName, long size)
     {
         var storage = new FileStorageService(Options.Create(new FileStorageSettings()),

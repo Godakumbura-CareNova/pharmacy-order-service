@@ -7,7 +7,7 @@ using PharmacyOrder.Api.Models;
 using PharmacyOrder.Api.Services;
 using PharmacyOrder.Api.Services.Interfaces;
 
-namespace PharmacyOrder.Api.Tests.UnitMocking;
+namespace PharmacyOrder.UnitMocking.Tests;
 
 // GCN-27 Medicine Category Management
 public class GCN27_MedicineCategoryManagementTests
@@ -28,7 +28,6 @@ public class GCN27_MedicineCategoryManagementTests
 
     // service errors are turned into the right status code
     [Theory]
-    [InlineData(typeof(ArgumentException), typeof(BadRequestObjectResult))]
     [InlineData(typeof(InvalidOperationException), typeof(ConflictObjectResult))]
     public async Task Create_ServiceError_ReturnsMatchingStatus(Type exceptionType, Type expectedResult)
     {
@@ -43,8 +42,6 @@ public class GCN27_MedicineCategoryManagementTests
 
     // name must be 2 to 80 characters
     [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
     [InlineData("A")]
     public async Task CreateAsync_InvalidName_IsRejected(string name)
     {

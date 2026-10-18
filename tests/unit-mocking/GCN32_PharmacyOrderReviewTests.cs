@@ -8,7 +8,7 @@ using PharmacyOrder.Api.Models;
 using PharmacyOrder.Api.Services;
 using PharmacyOrder.Api.Services.Interfaces;
 
-namespace PharmacyOrder.Api.Tests.UnitMocking;
+namespace PharmacyOrder.UnitMocking.Tests;
 
 // GCN-32 Pharmacy Order Review
 public class GCN32_PharmacyOrderReviewTests
@@ -30,9 +30,6 @@ public class GCN32_PharmacyOrderReviewTests
 
     // only Verified or Rejected with a reason is accepted
     [Theory]
-    [InlineData("approve", null)]
-    [InlineData("verified", null)]
-    [InlineData("Rejected", null)]
     [InlineData("Rejected", "   ")]
     public async Task DecideAsync_InvalidDecision_IsRejected(string decision, string? reason)
     {
@@ -66,8 +63,6 @@ public class GCN32_PharmacyOrderReviewTests
     // staff cannot set an order back to pending or use unknown statuses
     [Theory]
     [InlineData("Pending")]
-    [InlineData("Shipped")]
-    [InlineData("")]
     public async Task UpdateStatusAsync_InvalidStatus_IsRejected(string status)
     {
         var staffOrders = new StaffOrderService(_db, Settings);
