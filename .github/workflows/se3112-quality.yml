@@ -1,0 +1,52 @@
+name: SE3112 Code Quality Checks
+
+on:
+  push:
+    branches:
+      - feature/SE3112-sonarqube-quality
+  pull_request:
+    branches:
+      - dev
+
+permissions:
+  contents: read
+
+jobs:
+  quality-checks:
+    name: Build, Test and Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore PharmacyOrder.sln
+
+      - name: Build solution
+        run: dotnet build PharmacyOrder.sln --configuration Release --no-restore
+
+      - name: Run API tests with coverage
+        run: |
+          dotnet test tests/PharmacyOrder.Api.Tests/PharmacyOrder.Api.Tests.csproj \
+            --configuration Release \
+            --no-build \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults \
+            --logger "trx" \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+      - name: Upload coverage and test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: se3112-quality-results
+          path: |
+            TestResults/**/*.trx
+            TestResults/**/coverage.opencover.xml
+          if-no-files-found: warn
