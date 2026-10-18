@@ -1,0 +1,6 @@
+{
+  "analysisLevel": "8.0-recommended",
+  "maxAnalyzerWarnings": 33,
+  "minLineCoveragePercent": 60,
+  "minBranchCoveragePercent": 70
+}
