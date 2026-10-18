@@ -58,3 +58,12 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# SonarQube generated files
+.sonarqube/
+
+# macOS metadata
+.DS_Store
+
+# Runtime medicine uploads
+src/PharmacyOrder.Api/wwwroot/uploads/
