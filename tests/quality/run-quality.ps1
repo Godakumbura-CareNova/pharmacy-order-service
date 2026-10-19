@@ -104,7 +104,7 @@ try {
         }
         TestsTotal = [int]$counters.total; TestsPassed = [int]$counters.passed; TestsFailed = [int]$counters.failed
         Policy = $policy; WarningsByRule = $rules
-        CoverageScope = 'PharmacyOrder.Api; generated EF Designer and ModelSnapshot files excluded; migration Up/Down logic included'
+        CoverageScope = 'PharmacyOrder.Api; all EF Core migration files excluded (generated code), matching SonarQube'
         Report = (Join-Path $reportPath 'index.html')
     }
     $summary | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $runDirectory 'summary.json') -Encoding UTF8
