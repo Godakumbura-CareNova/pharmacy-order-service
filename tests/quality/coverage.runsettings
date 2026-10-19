@@ -7,8 +7,8 @@
           <Format>cobertura</Format>
           <Include>[PharmacyOrder.Api]*</Include>
           <IncludeTestAssembly>false</IncludeTestAssembly>
-          <!-- Only generated EF designer/snapshot code is excluded. Migration Up/Down logic remains. -->
-          <ExcludeByFile>**/Migrations/*.Designer.cs,**/Migrations/*ModelSnapshot.cs</ExcludeByFile>
+          <!-- Exclude EF Core migration files from coverage, matching the SonarQube exclusion. -->
+          <ExcludeByFile>**/Migrations/*.cs</ExcludeByFile>
         </Configuration>
       </DataCollector>
     </DataCollectors>

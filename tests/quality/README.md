@@ -33,7 +33,7 @@ The installed SDK supplies the analyzer implementation; the analysis level alone
 
 The original unfiltered baseline was **22.9% line coverage, 76.5% branch coverage**, with 251 passing tests. It included thousands of unexecuted generated EF migration-designer/model-snapshot lines.
 
-`coverage.runsettings` excludes only `Migrations/*.Designer.cs` and `Migrations/*ModelSnapshot.cs`, includes only the API assembly, and excludes test assemblies. Handwritten controllers/services and migration Up/Down logic remain measured. No source annotations were added.
+`coverage.runsettings` excludes the whole `Migrations/` folder, includes only the API assembly, and excludes test assemblies. This matches SonarQube (`sonar.coverage.exclusions=**/Migrations/**`). Handwritten controllers and services remain measured.
 
 Keep the original unfiltered report for context. A higher scoped percentage reflects a changed denominator, **not new tests or improved correctness**. The report only proves code execution, not assertion quality or absence of bugs.
 
